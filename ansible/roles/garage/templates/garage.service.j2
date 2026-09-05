@@ -1,0 +1,20 @@
+[Unit]
+Description=Garage Object Storage
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart={{ garage_binary }} -c {{ garage_config }} server --single-node --default-bucket
+Restart=always
+RestartSec=5
+User=root
+WorkingDirectory={{ garage_data_root }}
+Environment=RUST_LOG=info
+EnvironmentFile={{ garage_env_file }}
+StandardOutput=append:/var/log/garage.log
+StandardError=append:/var/log/garage.log
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

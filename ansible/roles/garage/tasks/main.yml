@@ -1,0 +1,89 @@
+---
+- name: Wait for SSH after Terraform creates the CT
+  ansible.builtin.wait_for_connection:
+    timeout: 180
+
+- name: Install packages for Garage install
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+    state: present
+    update_cache: true
+
+- name: Create Garage directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+  loop:
+    - "{{ garage_data_root }}"
+    - "{{ garage_data_root }}/data"
+    - "{{ garage_data_root }}/meta"
+    - "{{ garage_data_root }}/snapshots"
+
+- name: Probe installed Garage version
+  ansible.builtin.command:
+    cmd: "{{ garage_binary }} --version"
+  register: garage_installed_version
+  changed_when: false
+  failed_when: false
+
+- name: Download pinned Garage musl binary
+  ansible.builtin.get_url:
+    url: "{{ garage_download_url }}"
+    dest: "{{ garage_binary }}"
+    mode: "0755"
+    owner: root
+    group: root
+    force: true
+  notify: Restart garage
+  when: garage_installed_version.rc != 0 or garage_version not in garage_installed_version.stdout
+
+- name: Install garage.toml
+  ansible.builtin.template:
+    src: garage.toml.j2
+    dest: "{{ garage_config }}"
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Restart garage
+
+- name: Install Garage environment file
+  ansible.builtin.template:
+    src: garage.env.j2
+    dest: "{{ garage_env_file }}"
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Restart garage
+
+- name: Install Garage systemd unit
+  ansible.builtin.template:
+    src: garage.service.j2
+    dest: /etc/systemd/system/garage.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart garage
+
+- name: Enable and start Garage
+  ansible.builtin.systemd:
+    name: garage
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Apply pending Garage restarts
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait until Garage reports a healthy node
+  ansible.builtin.command:
+    cmd: "{{ garage_binary }} -c {{ garage_config }} status"
+  register: garage_status
+  retries: 20
+  delay: 3
+  changed_when: false
+  until: garage_status.rc == 0 and 'HEALTHY NODES' in garage_status.stdout

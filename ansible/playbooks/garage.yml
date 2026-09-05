@@ -1,0 +1,7 @@
+---
+- name: Install and configure Garage on CT 112
+  hosts: garage
+  become: true
+  gather_facts: true
+  roles:
+    - garage

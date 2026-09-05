@@ -1,0 +1,31 @@
+version: "3"
+
+env:
+  SOPS_AGE_KEY_FILE:
+    sh: printf '%s' "${SOPS_AGE_KEY_FILE:-$HOME/.config/sops/age/keys.txt}"
+  PATH:
+    sh: printf '%s:%s' "$HOME/.local/bin" "$PATH"
+
+tasks:
+  default:
+    silent: true
+    cmds:
+      - task --list
+
+  terraform:
+    desc: "terraform ..."
+    dir: terraform
+    env:
+      AWS_DEFAULT_REGION: garage
+      AWS_ACCESS_KEY_ID:
+        sh: sops -d --extract '["garage_s3_access_key"]' {{.TASKFILE_DIR}}/ansible/inventory/group_vars/garage.sops.yml
+      AWS_SECRET_ACCESS_KEY:
+        sh: sops -d --extract '["garage_s3_secret_key"]' {{.TASKFILE_DIR}}/ansible/inventory/group_vars/garage.sops.yml
+    cmds:
+      - terraform {{.CLI_ARGS}}
+
+  ansible:
+    desc: "ansible-playbook ..."
+    dir: ansible
+    cmds:
+      - ansible-playbook {{.CLI_ARGS}}
