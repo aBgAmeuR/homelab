@@ -1,0 +1,30 @@
+---
+monitoring_config_dir: /opt/monitoring
+monitoring_data_dir: /var/lib/monitoring
+
+monitoring_stack_src: "{{ inventory_dir | dirname | dirname }}/docker/monitoring"
+
+# Each image runs as a fixed uid.
+monitoring_data_owners:
+  grafana: "472"
+  prometheus: "65534"
+  loki: "10001"
+  tempo: "10001"
+  pyroscope: "10001"
+
+monitoring_grafana_port: 3000
+# The only account. lldap and TinyAuth replace it when the edge lands.
+monitoring_grafana_admin_user: admin
+
+# One node exporter and one cAdvisor per Docker host.
+monitoring_node_targets:
+  - address: node-exporter:9100
+    instance: monitoring
+
+monitoring_cadvisor_targets:
+  - address: cadvisor:8080
+    instance: monitoring
+
+monitoring_pve_user: monitoring@pve
+monitoring_pve_token_name: prometheus
+monitoring_pve_verify_ssl: false

@@ -1,20 +1,20 @@
-module "garage" {
+module "monitoring" {
   source = "./modules/lxc"
 
   node_name        = local.node_name
-  vm_id            = 112
-  hostname         = "garage"
-  description      = "Garage S3 (Managed by Terraform)"
+  vm_id            = 111
+  hostname         = "monitoring"
+  description      = "Observability stack (Managed by Terraform)"
   template_file_id = local.debian_template
 
-  cores     = 1
-  memory_mb = 512
-  swap_mb   = 256
-  disk_gb   = 32
+  cores     = 2
+  memory_mb = 4096
+  swap_mb   = 1024
+  disk_gb   = 64
   nesting   = true
 
   network         = local.network
-  ipv4_address    = "192.168.1.112/24"
+  ipv4_address    = "192.168.1.111/24"
   ssh_public_keys = local.ssh_public_keys
 
   firewall_rules = [
@@ -24,9 +24,9 @@ module "garage" {
       dport   = "22"
     },
     {
-      comment = "Garage S3 from remote-dev"
-      source  = local.remote_dev_ipv4
-      dport   = "3900"
+      comment = "Grafana from the LAN"
+      source  = local.lan_cidr
+      dport   = "3000"
     },
   ]
 

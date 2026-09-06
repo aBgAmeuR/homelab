@@ -1,0 +1,5 @@
+default:
+  user: {{ monitoring_pve_user }}
+  token_name: {{ monitoring_pve_token_name }}
+  token_value: {{ monitoring_pve_token_value }}
+  verify_ssl: {{ monitoring_pve_verify_ssl | ternary('true', 'false') }}

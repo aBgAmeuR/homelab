@@ -1,0 +1,10 @@
+{% if monitoring_node_targets %}
+{% for target in monitoring_node_targets %}
+- targets:
+    - "{{ target.address }}"
+  labels:
+    instance: {{ target.instance }}
+{% endfor %}
+{% else %}
+[]
+{% endif %}

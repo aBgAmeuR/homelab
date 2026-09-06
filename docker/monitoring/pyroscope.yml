@@ -1,0 +1,20 @@
+target: all
+
+server:
+  http_listen_address: 0.0.0.0
+  http_listen_port: 4040
+  log_level: info
+
+pyroscopedb:
+  data_path: /data
+
+storage:
+  backend: filesystem
+  filesystem:
+    dir: /data/blocks
+
+limits:
+  max_query_lookback: 14d
+
+analytics:
+  reporting_enabled: false

@@ -1,0 +1,119 @@
+name: monitoring
+
+services:
+  grafana:
+    restart: unless-stopped
+    image: grafana/grafana:13.2.1
+    user: "472"
+    env_file:
+      - grafana.env
+    environment:
+      GF_SERVER_ROOT_URL: http://monitoring.antoinejosset.fr:3000
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+    volumes:
+      - /var/lib/monitoring/grafana:/var/lib/grafana
+      - ./grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./grafana/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards/homelab:ro
+    ports:
+      - "0.0.0.0:3000:3000"
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+      - pyroscope
+
+  prometheus:
+    restart: unless-stopped
+    image: prom/prometheus:v3.14.0
+    user: "65534"
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-otlp-receiver
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./targets:/etc/prometheus/targets:ro
+      - /var/lib/monitoring/prometheus:/prometheus
+
+  loki:
+    restart: unless-stopped
+    image: grafana/loki:3.7.7
+    user: "10001"
+    command:
+      - -config.file=/etc/loki/config.yml
+    volumes:
+      - ./loki.yml:/etc/loki/config.yml:ro
+      - /var/lib/monitoring/loki:/loki
+
+  tempo:
+    restart: unless-stopped
+    image: grafana/tempo:2.10.8
+    user: "10001"
+    command:
+      - -config.file=/etc/tempo/config.yml
+    volumes:
+      - ./tempo.yml:/etc/tempo/config.yml:ro
+      - /var/lib/monitoring/tempo:/var/tempo
+
+  pyroscope:
+    restart: unless-stopped
+    image: grafana/pyroscope:2.3.0
+    user: "10001"
+    command:
+      - -config.file=/etc/pyroscope/config.yml
+      - -retention-period=14d
+    volumes:
+      - ./pyroscope.yml:/etc/pyroscope/config.yml:ro
+      - /var/lib/monitoring/pyroscope:/data
+
+  otel-collector:
+    restart: unless-stopped
+    image: otel/opentelemetry-collector-contrib:0.160.0
+    command:
+      - --config=/etc/otelcol/config.yml
+    volumes:
+      - ./otelcol.yml:/etc/otelcol/config.yml:ro
+    ports:
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+
+  node-exporter:
+    restart: unless-stopped
+    image: prom/node-exporter:v1.12.1
+    pid: host
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+
+  cadvisor:
+    restart: unless-stopped
+    image: gcr.io/cadvisor/cadvisor:v0.55.1
+    privileged: true
+    command:
+      - --docker_only=true
+      - --housekeeping_interval=30s
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+
+  pve-exporter:
+    restart: unless-stopped
+    image: prompve/prometheus-pve-exporter:3.10.0
+    volumes:
+      - ./pve-exporter.yml:/etc/prometheus/pve.yml:ro

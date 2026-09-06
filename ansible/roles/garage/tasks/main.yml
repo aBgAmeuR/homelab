@@ -1,16 +1,4 @@
 ---
-- name: Wait for SSH after Terraform creates the CT
-  ansible.builtin.wait_for_connection:
-    timeout: 180
-
-- name: Install packages for Garage install
-  ansible.builtin.apt:
-    name:
-      - ca-certificates
-      - curl
-    state: present
-    update_cache: true
-
 - name: Create Garage directories
   ansible.builtin.file:
     path: "{{ item }}"

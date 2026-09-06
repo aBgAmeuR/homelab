@@ -1,0 +1,100 @@
+---
+- name: Create the configuration tree
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+  loop:
+    - "{{ monitoring_config_dir }}"
+    - "{{ monitoring_config_dir }}/grafana"
+    - "{{ monitoring_config_dir }}/grafana/dashboards"
+    - "{{ monitoring_config_dir }}/targets"
+
+- name: Create the data directories
+  ansible.builtin.file:
+    path: "{{ monitoring_data_dir }}/{{ item.key }}"
+    state: directory
+    owner: "{{ item.value }}"
+    group: "{{ item.value }}"
+    mode: "0750"
+  loop: "{{ monitoring_data_owners | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+
+- name: Install the stack
+  ansible.builtin.copy:
+    src: "{{ monitoring_stack_src }}/"
+    dest: "{{ monitoring_config_dir }}/"
+    owner: root
+    group: root
+    mode: "0644"
+    directory_mode: "0755"
+  notify: Restart the monitoring stack
+
+- name: Remove example secret files from the guest
+  ansible.builtin.file:
+    path: "{{ monitoring_config_dir }}/{{ item }}"
+    state: absent
+  loop:
+    - grafana.env.example
+    - pve-exporter.yml.example
+
+- name: Install the Grafana credentials
+  ansible.builtin.template:
+    src: grafana.env.j2
+    dest: "{{ monitoring_config_dir }}/grafana.env"
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Restart the monitoring stack
+
+- name: Install the Proxmox API credentials
+  ansible.builtin.template:
+    src: pve-exporter.yml.j2
+    dest: "{{ monitoring_config_dir }}/pve-exporter.yml"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart the monitoring stack
+
+- name: Install Prometheus node scrape targets
+  ansible.builtin.template:
+    src: targets-nodes.yml.j2
+    dest: "{{ monitoring_config_dir }}/targets/nodes.yml"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart the monitoring stack
+
+- name: Install Prometheus cAdvisor scrape targets
+  ansible.builtin.template:
+    src: targets-cadvisor.yml.j2
+    dest: "{{ monitoring_config_dir }}/targets/cadvisor.yml"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart the monitoring stack
+
+- name: Start the stack
+  ansible.builtin.command:
+    cmd: docker compose up --detach --remove-orphans
+    chdir: "{{ monitoring_config_dir }}"
+  register: monitoring_compose_up
+  changed_when: >-
+    'Started' in monitoring_compose_up.stderr
+    or 'Created' in monitoring_compose_up.stderr
+    or 'Recreated' in monitoring_compose_up.stderr
+
+- name: Apply pending restarts before checking health
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait until Grafana answers
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ monitoring_grafana_port }}/api/health"
+    status_code: 200
+  register: monitoring_grafana_health
+  retries: 30
+  delay: 5
+  until: monitoring_grafana_health.status == 200

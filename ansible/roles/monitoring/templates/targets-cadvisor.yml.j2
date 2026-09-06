@@ -1,0 +1,10 @@
+{% if monitoring_cadvisor_targets %}
+{% for target in monitoring_cadvisor_targets %}
+- targets:
+    - "{{ target.address }}"
+  labels:
+    instance: {{ target.instance }}
+{% endfor %}
+{% else %}
+[]
+{% endif %}

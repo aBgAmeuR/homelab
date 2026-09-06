@@ -1,0 +1,11 @@
+---
+- name: Wait for SSH after Terraform creates the container
+  ansible.builtin.wait_for_connection:
+    timeout: "{{ common_connection_timeout }}"
+
+- name: Install base packages
+  ansible.builtin.apt:
+    name: "{{ common_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600

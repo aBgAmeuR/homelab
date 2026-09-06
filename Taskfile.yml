@@ -29,3 +29,12 @@ tasks:
     dir: ansible
     cmds:
       - ansible-playbook {{.CLI_ARGS}}
+
+  check:
+    desc: "Format Terraform and syntax-check the playbooks"
+    cmds:
+      - terraform -chdir=terraform fmt -recursive -check
+      - terraform -chdir=terraform validate
+      - task: ansible
+        vars:
+          CLI_ARGS: --syntax-check playbooks/site.yml

@@ -1,0 +1,6 @@
+---
+- name: Configure every guest
+  ansible.builtin.import_playbook: garage.yml
+
+- name: Configure the observability stack
+  ansible.builtin.import_playbook: monitoring.yml

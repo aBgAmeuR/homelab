@@ -1,0 +1,7 @@
+---
+common_connection_timeout: 180
+
+common_packages:
+  - ca-certificates
+  - curl
+  - gnupg
