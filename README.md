@@ -26,7 +26,7 @@ docker/monitoring/         observability compose project (CT 111)
 docker/host/               stacks for the docker-host engine
 ```
 
-Terraform owns the Proxmox object: VMID, resources, NIC, static IP, root SSH key, guest firewall. Ansible installs Docker and copies the matching `docker/` tree onto the guest; it only templates secrets and Prometheus scrape targets. Neither tool touches the other's side, so a drifting guest never causes a container rebuild.
+Terraform owns the Proxmox object: VMID, resources, NIC, static IP, root SSH key, guest firewall. Ansible configures software on the guest: Docker and the matching `docker/` tree on compose hosts, or the Caddy package on CT 113. Neither tool touches the other's side, so a drifting guest never causes a container rebuild.
 
 ## Inventory
 
@@ -34,11 +34,12 @@ Terraform owns the Proxmox object: VMID, resources, NIC, static IP, root SSH key
 | --- | --- | --- | --- |
 | 111 | 192.168.1.111 | monitoring | Observability stack |
 | 112 | 192.168.1.112 | garage | Terraform state, S3 on :3900 |
+| 113 | 192.168.1.113 | caddy | Reverse proxy |
 
 
 ## Observability
 
-CT 111 runs Docker Engine and one Compose project. Grafana answers on `http://monitoring.antoinejosset.fr:3000`.
+CT 111 runs Docker Engine and one Compose project. Grafana answers on `https://monitoring.antoinejosset.fr` via Caddy (CT 113). Certificates come from Let's Encrypt using a Cloudflare DNS-01 challenge. Port 3000 on the LAN remains a direct HTTP bypass.
 
 | Signal | Source |
 | --- | --- |
@@ -65,6 +66,7 @@ task check
 sops terraform/secrets.sops.yaml
 sops ansible/inventory/group_vars/garage.sops.yml
 sops ansible/inventory/group_vars/monitoring.sops.yml
+sops ansible/inventory/group_vars/caddy.sops.yml
 ```
 
 ## Done by hand
@@ -73,6 +75,7 @@ Terraform does not manage Proxmox users, tokens or DNS.
 
 - Proxmox API user `terraform@pve` with `PVEAdmin` and `PVESysAdmin` on `/`, propagated.
 - Proxmox API user `monitoring@pve` with a privilege-separated token, `PVEAuditor` on `/`. The token secret goes into `monitoring_pve_token_value`.
-- Pi-hole A records for `garage` and `monitoring`.
+- Pi-hole A records for `garage`, `caddy`, and `monitoring`.
+- Cloudflare API token in `caddy_cloudflare_api_token`: Zone.Zone Read and Zone.DNS Edit on `antoinejosset.fr`.
 
 Guest SSH uses `~/.ssh/jarvis_ed25519`.

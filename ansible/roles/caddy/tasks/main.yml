@@ -1,0 +1,109 @@
+---
+- name: Require a Cloudflare API token
+  ansible.builtin.assert:
+    that:
+      - caddy_cloudflare_api_token is defined
+      - caddy_cloudflare_api_token | length > 0
+      - caddy_cloudflare_api_token != "CHANGE_ME"
+    fail_msg: >-
+      Set caddy_cloudflare_api_token in inventory/group_vars/caddy.sops.yml
+      (Zone.Zone Read and Zone.DNS Edit on antoinejosset.fr).
+
+- name: Create the APT keyring directory
+  ansible.builtin.file:
+    path: "{{ caddy_keyring | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install the Caddy APT key
+  ansible.builtin.get_url:
+    url: "{{ caddy_gpg_url }}"
+    dest: "{{ caddy_keyring }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Add the Caddy APT repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by={{ caddy_keyring }}] {{ caddy_repository_url }} any-version main"
+    filename: caddy-stable
+    state: present
+
+- name: Install Caddy
+  ansible.builtin.apt:
+    name: caddy
+    state: present
+    update_cache: true
+
+- name: List installed Caddy modules
+  ansible.builtin.command:
+    cmd: caddy list-modules
+  register: caddy_modules
+  changed_when: false
+
+- name: Add the Cloudflare DNS module
+  ansible.builtin.command:
+    cmd: caddy add-package {{ caddy_cloudflare_package }}
+  when: "'dns.providers.cloudflare' not in caddy_modules.stdout"
+  notify: Restart caddy
+
+- name: Install the Caddy environment file
+  ansible.builtin.template:
+    src: caddy.env.j2
+    dest: "{{ caddy_env_file }}"
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Restart caddy
+
+- name: Create the Caddy systemd drop-in directory
+  ansible.builtin.file:
+    path: "{{ caddy_systemd_override_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install the Caddy systemd drop-in
+  ansible.builtin.template:
+    src: caddy-override.conf.j2
+    dest: "{{ caddy_systemd_override_dir }}/override.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart caddy
+
+- name: Install the Caddyfile
+  ansible.builtin.template:
+    src: Caddyfile.j2
+    dest: "{{ caddy_config }}"
+    owner: caddy
+    group: caddy
+    mode: "0644"
+    validate: caddy validate --adapter caddyfile --config %s
+  environment:
+    CLOUDFLARE_API_TOKEN: "{{ caddy_cloudflare_api_token }}"
+  notify: Reload caddy
+
+- name: Enable and start Caddy
+  ansible.builtin.systemd:
+    name: caddy
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Apply pending Caddy reloads
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait until Caddy proxies Grafana over HTTPS
+  ansible.builtin.command:
+    cmd: >-
+      curl -fsS --resolve {{ caddy_site_host }}:443:127.0.0.1
+      https://{{ caddy_site_host }}/api/health
+  register: caddy_grafana_proxy
+  retries: 40
+  delay: 5
+  changed_when: false
+  until: caddy_grafana_proxy.rc == 0

@@ -1,0 +1,11 @@
+---
+caddy_keyring: /etc/apt/keyrings/caddy-stable.asc
+caddy_gpg_url: https://dl.cloudsmith.io/public/caddy/stable/gpg.key
+caddy_repository_url: https://dl.cloudsmith.io/public/caddy/stable/deb/debian
+
+caddy_config: /etc/caddy/Caddyfile
+caddy_env_file: /etc/caddy/caddy.env
+caddy_systemd_override_dir: /etc/systemd/system/caddy.service.d
+caddy_cloudflare_package: github.com/caddy-dns/cloudflare
+caddy_site_host: monitoring.antoinejosset.fr
+caddy_upstream: "192.168.1.111:3000"

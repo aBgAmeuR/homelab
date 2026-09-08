@@ -4,3 +4,6 @@
 
 - name: Configure the observability stack
   ansible.builtin.import_playbook: monitoring.yml
+
+- name: Configure the reverse proxy
+  ansible.builtin.import_playbook: caddy.yml

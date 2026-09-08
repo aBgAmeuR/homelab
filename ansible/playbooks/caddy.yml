@@ -1,0 +1,8 @@
+---
+- name: Caddy reverse proxy on CT 113
+  hosts: caddy
+  become: true
+  gather_facts: true
+  roles:
+    - common
+    - caddy
