@@ -1,46 +1,48 @@
 resource "proxmox_virtual_environment_container" "this" {
+  for_each = var.containers
+
   node_name     = var.node_name
-  vm_id         = var.vm_id
-  description   = var.description
-  unprivileged  = var.unprivileged
+  vm_id         = each.value.vmid
+  description   = each.value.description
+  unprivileged  = each.value.unprivileged
   started       = true
-  start_on_boot = var.start_on_boot
+  start_on_boot = each.value.start_on_boot
 
   features {
-    nesting = var.nesting
+    nesting = each.value.nesting
   }
 
   cpu {
-    cores = var.cores
+    cores = each.value.cores
   }
 
   memory {
-    dedicated = var.memory_mb
-    swap      = var.swap_mb
+    dedicated = each.value.memory
+    swap      = coalesce(each.value.swap, max(128, each.value.memory / 2))
   }
 
   disk {
     datastore_id = var.datastore_id
-    size         = var.disk_gb
+    size         = each.value.disk_size
   }
 
   operating_system {
-    template_file_id = var.template_file_id
+    template_file_id = each.value.template
     type             = "debian"
   }
 
   initialization {
-    hostname = var.hostname
+    hostname = each.value.hostname
 
     dns {
-      domain  = var.network.dns_domain
-      servers = var.network.dns_servers
+      domain  = "antoinejosset.fr"
+      servers = ["192.168.1.41"]
     }
 
     ip_config {
       ipv4 {
-        address = var.ipv4_address
-        gateway = var.network.gateway
+        address = strcontains(each.value.ip_address, "/") ? each.value.ip_address : "${each.value.ip_address}/24"
+        gateway = each.value.gateway
       }
     }
 
@@ -51,7 +53,7 @@ resource "proxmox_virtual_environment_container" "this" {
 
   network_interface {
     name     = "eth0"
-    bridge   = var.network.bridge
+    bridge   = "vmbr0"
     firewall = true
   }
 
@@ -59,36 +61,4 @@ resource "proxmox_virtual_environment_container" "this" {
     ipv4 = true
     ipv6 = false
   }
-}
-
-resource "proxmox_virtual_environment_firewall_options" "this" {
-  node_name     = var.node_name
-  container_id  = proxmox_virtual_environment_container.this.vm_id
-  enabled       = true
-  dhcp          = false
-  ndp           = false
-  radv          = false
-  input_policy  = var.firewall_input_policy
-  output_policy = var.firewall_output_policy
-}
-
-resource "proxmox_virtual_environment_firewall_rules" "this" {
-  node_name    = var.node_name
-  container_id = proxmox_virtual_environment_container.this.vm_id
-
-  dynamic "rule" {
-    for_each = var.firewall_rules
-
-    content {
-      type    = "in"
-      action  = "ACCEPT"
-      comment = rule.value.comment
-      source  = rule.value.source
-      dport   = rule.value.dport
-      proto   = rule.value.proto
-      log     = "nolog"
-    }
-  }
-
-  depends_on = [proxmox_virtual_environment_firewall_options.this]
 }

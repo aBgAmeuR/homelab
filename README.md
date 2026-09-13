@@ -11,7 +11,7 @@ Terraform provisions Proxmox LXC guests. Ansible configures those guests using s
 | Configuration | Ansible |
 | Secrets | SOPS + age |
 | Observability | Grafana, Prometheus, Loki, Tempo, Pyroscope, OpenTelemetry Collector |
-| Edge | Caddy, TinyAuth (forward-auth), lldap |
+| Edge | Caddy, TinyAuth (OIDC + forward-auth), lldap |
 | Workloads | Docker Compose, Renovate |
 
 Apply from the CLI. Self-hosted GitHub runner after the stack is in Git.
@@ -20,13 +20,14 @@ Apply from the CLI. Self-hosted GitHub runner after the stack is in Git.
 
 ```
 terraform/                 guests, firewall, remote state
-terraform/modules/         reusable LXC definition
+terraform/modules/lxc      LXC containers from the tfvars map
+terraform/modules/firewall cluster, node, and guest firewall
 ansible/                   playbooks, roles, inventory
 docker/monitoring/         observability compose project (CT 111)
 docker/host/               stacks for the docker-host engine
 ```
 
-Terraform owns the Proxmox object: VMID, resources, NIC, static IP, root SSH key, guest firewall. Ansible configures software on the guest: Docker and the matching `docker/` tree on compose hosts, or the Caddy package on CT 113. Neither tool touches the other's side, so a drifting guest never causes a container rebuild.
+Terraform owns the Proxmox object: VMID, resources, NIC, static IP, root SSH key, guest firewall. Ansible configures software on the guest: Docker and the matching `docker/` tree on compose hosts, the Caddy package on CT 113, or the lldap and TinyAuth binaries on CT 114. Neither tool touches the other's side, so a drifting guest never causes a container rebuild.
 
 ## Inventory
 
@@ -35,11 +36,11 @@ Terraform owns the Proxmox object: VMID, resources, NIC, static IP, root SSH key
 | 111 | 192.168.1.111 | monitoring | Observability stack |
 | 112 | 192.168.1.112 | garage | Terraform state, S3 on :3900 |
 | 113 | 192.168.1.113 | caddy | Reverse proxy |
-
+| 114 | 192.168.1.114 | auth | lldap + TinyAuth |
 
 ## Observability
 
-CT 111 runs Docker Engine and one Compose project. Grafana answers on `https://monitoring.antoinejosset.fr` via Caddy (CT 113). Certificates come from Let's Encrypt using a Cloudflare DNS-01 challenge. Port 3000 on the LAN remains a direct HTTP bypass.
+CT 111 runs Docker Engine and one Compose project. Grafana answers on `https://monitoring.antoinejosset.fr` via Caddy (CT 113). Certificates come from Let's Encrypt using a Cloudflare DNS-01 challenge. Guest firewall allows Grafana `:3000` from Caddy (`192.168.1.113`) only.
 
 | Signal | Source |
 | --- | --- |
@@ -48,6 +49,14 @@ CT 111 runs Docker Engine and one Compose project. Grafana answers on `https://m
 | Proxmox metrics | pve-exporter reading the API on 192.168.1.40 |
 | Stack health | Loki, Tempo, Pyroscope and the collector scrape themselves |
 | Metrics, logs, traces from applications | OTLP collector, ready to ingest |
+
+## Auth
+
+CT 114 runs lldap and TinyAuth as systemd units (no Docker). Caddy publishes `https://auth.antoinejosset.fr` to TinyAuth on `192.168.1.114:3000`. lldap listens on localhost only (LDAP 3890, UI 17170). Groups `admin` and `user` are homelab-wide. Grafana Generic OAuth uses TinyAuth as the OIDC issuer; the local Grafana `admin` password stays as break-glass.
+
+Apply order: Terraform 114 → DNS → `playbooks/auth.yml` → `playbooks/caddy.yml`. Grafana and TinyAuth share one OIDC client pair in `inventory/group_vars/all.sops.yml`.
+
+Add user in lldap: [docs/add-user.md](docs/add-user.md).
 
 ## Commands
 
@@ -60,13 +69,13 @@ task ansible -- playbooks/site.yml
 task check
 ```
 
-`task terraform` decrypts Garage S3 keys from SOPS, then runs Terraform in `terraform/`.
-
 ```bash
 sops terraform/secrets.sops.yaml
+sops ansible/inventory/group_vars/all.sops.yml
 sops ansible/inventory/group_vars/garage.sops.yml
 sops ansible/inventory/group_vars/monitoring.sops.yml
 sops ansible/inventory/group_vars/caddy.sops.yml
+sops ansible/inventory/group_vars/auth.sops.yml
 ```
 
 ## Done by hand
@@ -75,7 +84,8 @@ Terraform does not manage Proxmox users, tokens or DNS.
 
 - Proxmox API user `terraform@pve` with `PVEAdmin` and `PVESysAdmin` on `/`, propagated.
 - Proxmox API user `monitoring@pve` with a privilege-separated token, `PVEAuditor` on `/`. The token secret goes into `monitoring_pve_token_value`.
-- Pi-hole A records for `garage`, `caddy`, and `monitoring`.
+- Pi-hole A records for `garage`, `caddy`, and `monitoring`. `auth.antoinejosset.fr` must resolve to Caddy (`192.168.1.113`), not CT 114. Inventory SSH uses `ansible_host: 192.168.1.114`.
+- After the auth role: lldap user ([docs/add-user.md](docs/add-user.md)).
 - Cloudflare API token in `caddy_cloudflare_api_token`: Zone.Zone Read and Zone.DNS Edit on `antoinejosset.fr`.
 
 Guest SSH uses `~/.ssh/jarvis_ed25519`.

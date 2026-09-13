@@ -1,19 +1,9 @@
-output "vm_id" {
-  value       = proxmox_virtual_environment_container.this.vm_id
-  description = "Container VMID."
+output "container_ids" {
+  description = "vm_id of each container, keyed by logical name"
+  value       = { for k, ct in proxmox_virtual_environment_container.this : k => ct.vm_id }
 }
 
-output "hostname" {
-  value       = var.hostname
-  description = "Guest hostname."
-}
-
-output "fqdn" {
-  value       = "${var.hostname}.${var.network.dns_domain}"
-  description = "Guest FQDN, used by the Ansible inventory."
-}
-
-output "ipv4_address" {
-  value       = split("/", var.ipv4_address)[0]
-  description = "Guest IPv4 address without the prefix length."
+output "ip_addresses" {
+  description = "IP address of each container, keyed by logical name"
+  value       = { for k, v in var.containers : k => v.ip_address }
 }

@@ -97,13 +97,18 @@
 - name: Apply pending Caddy reloads
   ansible.builtin.meta: flush_handlers
 
-- name: Wait until Caddy proxies Grafana over HTTPS
+- name: Wait until Caddy proxies each site over HTTPS
   ansible.builtin.command:
     cmd: >-
-      curl -fsS --resolve {{ caddy_site_host }}:443:127.0.0.1
-      https://{{ caddy_site_host }}/api/health
-  register: caddy_grafana_proxy
+      curl -sS -o /dev/null -w '%{http_code}'
+      --resolve {{ item.host }}:443:127.0.0.1
+      https://{{ item.host }}{{ item.health_path }}
+  register: caddy_site_proxy
   retries: 40
   delay: 5
   changed_when: false
-  until: caddy_grafana_proxy.rc == 0
+  until: caddy_site_proxy.stdout | default('000') | int >= 200
+    and caddy_site_proxy.stdout | default('000') | int < 400
+  loop: "{{ caddy_sites }}"
+  loop_control:
+    label: "{{ item.host }}"

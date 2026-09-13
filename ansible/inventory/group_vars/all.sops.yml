@@ -1,0 +1,17 @@
+grafana_oidc_client_id: ENC[AES256_GCM,data:aBIyHdJObMh7RdU3LXt3Cv0DeTJPo5txLn4MPq3uUUz9f1DS,iv:3DcDYeyOzn8sjfJ7bRrAMN8jZEt11BqRaXc2MqNgccE=,tag:cOQtMercmXC4aqNqTFAviQ==,type:str]
+grafana_oidc_client_secret: ENC[AES256_GCM,data:B36CJ1NfwKxM2rMAHDruIZuaDNapbtq7I9hDraoIRrUcTIVGMx4fTlwG22tJpMOxMMYn0qmEY/1o1ET5a0EbEg==,iv:nGfpqx0bCLtwUvuD7kvTVTdEcNF6E+t9pw+i6lLZ1ps=,tag:bAjN2BdmcsuLDIrFRT1O9w==,type:str]
+sops:
+    age:
+        - recipient: age1tv0xuwt0ys6adrjm2ad66dtzjc29jg4xcamuf8ceqmkulm3uvf8snx5jkw
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSB4YWlLZnFNMG5Jd1VEWEpJ
+            RVpINlAwall6d3BVb0Q4Nlp1Q3JaOXRzUHpNCmthMi8vcTAyUkZsQjFmWmt2aVhm
+            NFIyOEUweDhHWUdiSEgxWVVzZXRvRU0KLS0tIDNnUDRvREFDaTlwb2Z2RVl4REVI
+            NzFBVTMxSHgwOTdOZTVrd3phL0pxMlUKX83KH9xzYZp0qyL1iBAB4+JnBVUh/LJ+
+            Bf0dt7tMXYIaeYDAKDbMvXTo70BjPN1eqHexbg74Fif9VU52j8LwKA==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-09-12T14:23:13Z"
+    mac: ENC[AES256_GCM,data:ei+xc2caASIa3kZpknAfLISjFJgiMBPXjJAJD2MYGsqMqcgQI/aBtX9B5CYA40PksIIpFo2sKl7fT1PTiDKhybYvCpfkRbAwW6cW2I527udO1WPikOzni6NcpE4LW53F460XJeHiAp1YZIjxU+fGTP/DpWBLHwZpAWW6PwTxd1o=,iv:4AQ9oVHhDYYx6uQLlgwm+OvCJ4/oI7mrU87lII/B2sQ=,tag:n9wZtwHU5lqzWyH3OCukrA==,type:str]
+    unencrypted_suffix: _unencrypted
+    version: 3.10.2

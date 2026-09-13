@@ -1,0 +1,129 @@
+---
+- name: Log in to lldap as the directory admin
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ auth_lldap_http_port }}/auth/simple/login"
+    method: POST
+    body_format: json
+    body:
+      username: "{{ auth_lldap_admin_user }}"
+      password: "{{ auth_lldap_admin_password }}"
+    status_code: 200
+  register: auth_lldap_login
+  no_log: true
+  retries: 10
+  delay: 2
+  until: >-
+    auth_lldap_login.status | default(0) == 200
+    and (auth_lldap_login.json.token | default('') | length > 0)
+
+- name: List lldap groups and users
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ auth_lldap_http_port }}/api/graphql"
+    method: POST
+    body_format: json
+    headers:
+      Authorization: "Bearer {{ auth_lldap_login.json.token }}"
+    body:
+      query: "{ groups { id displayName } users { id } }"
+    status_code: 200
+  register: auth_lldap_catalog
+  no_log: true
+  failed_when: (auth_lldap_catalog.json.errors | default([])) | length > 0
+
+- name: Create missing lldap groups
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ auth_lldap_http_port }}/api/graphql"
+    method: POST
+    body_format: json
+    headers:
+      Authorization: "Bearer {{ auth_lldap_login.json.token }}"
+    body:
+      query: "mutation { createGroup(name: \"{{ item }}\") { id displayName } }"
+    status_code: 200
+  loop:
+    - admin
+    - user
+  when: item not in (auth_lldap_catalog.json.data.groups | map(attribute='displayName') | list)
+  no_log: true
+  failed_when: (auth_lldap_create_group.json.errors | default([])) | length > 0
+  register: auth_lldap_create_group
+
+- name: Create the TinyAuth bind user
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ auth_lldap_http_port }}/api/graphql"
+    method: POST
+    body_format: json
+    headers:
+      Authorization: "Bearer {{ auth_lldap_login.json.token }}"
+    body:
+      query: >-
+        mutation {
+          createUser(user: {
+            id: "{{ auth_lldap_bind_user }}",
+            email: "{{ auth_lldap_bind_email }}",
+            displayName: "TinyAuth bind"
+          }) { id }
+        }
+    status_code: 200
+  when: auth_lldap_bind_user not in (auth_lldap_catalog.json.data.users | map(attribute='id') | list)
+  no_log: true
+  failed_when: (auth_lldap_create_bind.json.errors | default([])) | length > 0
+  register: auth_lldap_create_bind
+
+- name: Set the TinyAuth bind user password
+  ansible.builtin.command:
+    argv:
+      - "{{ auth_lldap_set_password_binary }}"
+      - --base-url
+      - "http://127.0.0.1:{{ auth_lldap_http_port }}"
+      - --admin-username
+      - "{{ auth_lldap_admin_user }}"
+      - --admin-password
+      - "{{ auth_lldap_admin_password }}"
+      - --username
+      - "{{ auth_lldap_bind_user }}"
+      - --password
+      - "{{ auth_lldap_bind_password }}"
+  no_log: true
+  changed_when: false
+
+- name: List TinyAuth bind user groups
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ auth_lldap_http_port }}/api/graphql"
+    method: POST
+    body_format: json
+    headers:
+      Authorization: "Bearer {{ auth_lldap_login.json.token }}"
+    body:
+      query: "{ user(userId: \"{{ auth_lldap_bind_user }}\") { groups { displayName } } }"
+    status_code: 200
+  register: auth_lldap_bind_user_info
+  no_log: true
+  failed_when: (auth_lldap_bind_user_info.json.errors | default([])) | length > 0
+
+- name: Add the TinyAuth bind user to lldap_strict_readonly
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ auth_lldap_http_port }}/api/graphql"
+    method: POST
+    body_format: json
+    headers:
+      Authorization: "Bearer {{ auth_lldap_login.json.token }}"
+    body:
+      query: >-
+        mutation {
+          addUserToGroup(
+            userId: "{{ auth_lldap_bind_user }}",
+            groupId: {{ auth_lldap_catalog.json.data.groups
+              | selectattr('displayName', 'equalto', 'lldap_strict_readonly')
+              | map(attribute='id')
+              | first }}
+          ) { ok }
+        }
+    status_code: 200
+  when: >-
+    'lldap_strict_readonly' not in
+    (auth_lldap_bind_user_info.json.data.user.groups | map(attribute='displayName') | list)
+  no_log: true
+  failed_when: (auth_lldap_bind_group.json.errors | default([])) | length > 0
+  register: auth_lldap_bind_group
+

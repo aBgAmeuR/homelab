@@ -13,8 +13,9 @@ monitoring_data_owners:
   pyroscope: "10001"
 
 monitoring_grafana_port: 3000
-# The only account. lldap and TinyAuth replace it when the edge lands.
+# Local break-glass account. OIDC users come from TinyAuth/lldap.
 monitoring_grafana_admin_user: admin
+monitoring_grafana_oauth_issuer: https://auth.antoinejosset.fr
 
 # One node exporter and one cAdvisor per Docker host.
 monitoring_node_targets:
