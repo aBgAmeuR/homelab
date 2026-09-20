@@ -1,0 +1,7 @@
+---
+baseline_connection_timeout: 180
+
+baseline_packages:
+  - ca-certificates
+  - curl
+  - gnupg

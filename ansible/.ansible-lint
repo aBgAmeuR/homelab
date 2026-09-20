@@ -1,0 +1,10 @@
+---
+# Run from this directory: ansible-lint
+# Not hooked into `task check` yet.
+
+offline: true
+
+exclude_paths:
+  - collections/
+  - .ansible/
+  - inventory/group_vars/*.sops.yml

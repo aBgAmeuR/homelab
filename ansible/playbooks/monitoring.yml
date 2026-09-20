@@ -1,9 +1,0 @@
----
-- name: Observability stack on CT 111
-  hosts: monitoring
-  become: true
-  gather_facts: true
-  roles:
-    - common
-    - docker
-    - monitoring

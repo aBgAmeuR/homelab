@@ -1,0 +1,8 @@
+---
+- name: Baseline OS on every guest
+  hosts: all
+  become: true
+  gather_facts: true
+  tags: [baseline]
+  roles:
+    - baseline

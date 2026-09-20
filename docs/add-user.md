@@ -1,6 +1,6 @@
 # Add a user
 
-The auth playbook creates groups `admin` and `user` and the bind account `tinyauth`. You add users in the lldap UI. TinyAuth binds to lldap on localhost.
+The identity playbook creates groups `admin` and `user` and the bind account `tinyauth`. You add users in the lldap UI. TinyAuth binds to lldap on localhost.
 
 ## UI
 
@@ -13,7 +13,7 @@ ssh -i ~/.ssh/jarvis_ed25519 -N -L 17170:127.0.0.1:17170 root@192.168.1.114
 Open [http://127.0.0.1:17170](http://127.0.0.1:17170). Username `admin`. From the repo root:
 
 ```bash
-sops -d --extract '["auth_lldap_admin_password"]' ansible/inventory/group_vars/auth.sops.yml
+sops -d --extract '["auth_lldap_admin_password"]' ansible/inventory/group_vars/identity_servers.sops.yml
 ```
 
 ## User

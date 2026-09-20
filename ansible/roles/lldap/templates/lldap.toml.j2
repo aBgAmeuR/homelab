@@ -1,0 +1,10 @@
+ldap_host = "127.0.0.1"
+ldap_port = {{ lldap_ldap_port }}
+http_host = "127.0.0.1"
+http_port = {{ lldap_http_port }}
+http_url = "http://127.0.0.1:{{ lldap_http_port }}"
+ldap_base_dn = "{{ lldap_base_dn }}"
+ldap_user_dn = "{{ lldap_admin_user }}"
+ldap_user_email = "{{ lldap_admin_email }}"
+database_url = "sqlite://{{ lldap_data_dir }}/users.db?mode=rwc"
+assets_path = "{{ lldap_install_dir }}/app"

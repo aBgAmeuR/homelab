@@ -1,0 +1,78 @@
+---
+- name: Require a compose project path
+  ansible.builtin.assert:
+    that:
+      - compose_project_src | length > 0
+      - compose_project_dest | length > 0
+    fail_msg: Set compose_project_src and compose_project_dest in group_vars.
+
+- name: Create the compose project directory
+  ansible.builtin.file:
+    path: "{{ compose_project_dest }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Create data directories with image UIDs
+  ansible.builtin.file:
+    path: "{{ compose_data_dir }}/{{ item.key }}"
+    state: directory
+    owner: "{{ item.value }}"
+    group: "{{ item.value }}"
+    mode: "0750"
+  loop: "{{ compose_data_owners | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  when: compose_data_dir | length > 0
+
+- name: Sync the compose project from the repo
+  ansible.builtin.copy:
+    src: "{{ compose_project_src }}/"
+    dest: "{{ compose_project_dest }}/"
+    owner: root
+    group: root
+    mode: "0644"
+    directory_mode: "0755"
+  notify: Reconcile compose stack
+
+- name: Remove example secret files from the guest
+  ansible.builtin.file:
+    path: "{{ compose_project_dest }}/{{ item }}"
+    state: absent
+  loop: "{{ compose_remove_files }}"
+
+- name: Install compose secret and overlay files
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ compose_project_dest }}/{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+  loop: "{{ compose_templates }}"
+  loop_control:
+    label: "{{ item.dest }}"
+  notify: Reconcile compose stack
+
+- name: Start the compose project
+  ansible.builtin.command:
+    cmd: docker compose up --detach --remove-orphans
+    chdir: "{{ compose_project_dest }}"
+  register: compose_up
+  changed_when: >-
+    'Started' in compose_up.stderr
+    or 'Created' in compose_up.stderr
+    or 'Recreated' in compose_up.stderr
+
+- name: Apply pending compose reconciles
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait until the compose health endpoint answers
+  ansible.builtin.uri:
+    url: "{{ compose_health_url }}"
+    status_code: 200
+  register: compose_health
+  retries: "{{ compose_health_retries }}"
+  delay: "{{ compose_health_delay }}"
+  until: compose_health.status == 200
+  when: compose_health_url | length > 0

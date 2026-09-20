@@ -1,8 +1,9 @@
 ---
-- name: Garage S3 on CT 112
-  hosts: garage
+- name: Garage S3
+  hosts: garage_servers
   become: true
   gather_facts: true
+  tags: [garage]
   roles:
-    - common
+    - baseline
     - garage

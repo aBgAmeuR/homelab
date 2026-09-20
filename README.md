@@ -14,7 +14,7 @@ Terraform provisions Proxmox LXC guests. Ansible configures those guests using s
 | Edge | Caddy, TinyAuth (OIDC + forward-auth), lldap |
 | Workloads | Docker Compose, Renovate |
 
-Apply from the CLI. Self-hosted GitHub runner after the stack is in Git.
+Apply from the CLI.
 
 ## Layout
 
@@ -22,7 +22,7 @@ Apply from the CLI. Self-hosted GitHub runner after the stack is in Git.
 terraform/                 guests, firewall, remote state
 terraform/modules/lxc      LXC containers from the tfvars map
 terraform/modules/firewall cluster, node, and guest firewall
-ansible/                   playbooks, roles, inventory
+ansible/                   playbooks by domain, roles by software, inventory
 docker/monitoring/         observability compose project (CT 111)
 docker/host/               stacks for the docker-host engine
 ```
@@ -54,7 +54,7 @@ CT 111 runs Docker Engine and one Compose project. Grafana answers on `https://m
 
 CT 114 runs lldap and TinyAuth as systemd units (no Docker). Caddy publishes `https://auth.antoinejosset.fr` to TinyAuth on `192.168.1.114:3000`. lldap listens on localhost only (LDAP 3890, UI 17170). Groups `admin` and `user` are homelab-wide. Grafana Generic OAuth uses TinyAuth as the OIDC issuer; the local Grafana `admin` password stays as break-glass.
 
-Apply order: Terraform 114 → DNS → `playbooks/auth.yml` → `playbooks/caddy.yml`. Grafana and TinyAuth share one OIDC client pair in `inventory/group_vars/all.sops.yml`.
+Apply order: Terraform 114 → DNS → `playbooks/identity.yml` → `playbooks/edge.yml`. Grafana and TinyAuth share one OIDC client pair in `inventory/group_vars/all.sops.yml`.
 
 Add user in lldap: [docs/add-user.md](docs/add-user.md).
 
@@ -72,10 +72,10 @@ task check
 ```bash
 sops terraform/secrets.sops.yaml
 sops ansible/inventory/group_vars/all.sops.yml
-sops ansible/inventory/group_vars/garage.sops.yml
-sops ansible/inventory/group_vars/monitoring.sops.yml
-sops ansible/inventory/group_vars/caddy.sops.yml
-sops ansible/inventory/group_vars/auth.sops.yml
+sops ansible/inventory/group_vars/garage_servers.sops.yml
+sops ansible/inventory/group_vars/observability.sops.yml
+sops ansible/inventory/group_vars/reverse_proxies.sops.yml
+sops ansible/inventory/group_vars/identity_servers.sops.yml
 ```
 
 ## Done by hand
@@ -84,8 +84,8 @@ Terraform does not manage Proxmox users, tokens or DNS.
 
 - Proxmox API user `terraform@pve` with `PVEAdmin` and `PVESysAdmin` on `/`, propagated.
 - Proxmox API user `monitoring@pve` with a privilege-separated token, `PVEAuditor` on `/`. The token secret goes into `monitoring_pve_token_value`.
-- Pi-hole A records for `garage`, `caddy`, and `monitoring`. `auth.antoinejosset.fr` must resolve to Caddy (`192.168.1.113`), not CT 114. Inventory SSH uses `ansible_host: 192.168.1.114`.
-- After the auth role: lldap user ([docs/add-user.md](docs/add-user.md)).
+- Pi-hole A records for `garage`, `caddy`, and `monitoring`. `auth.antoinejosset.fr` must resolve to Caddy (`192.168.1.113`), not CT 114. Inventory host `auth` uses `ansible_host: 192.168.1.114`.
+- After the identity playbook: lldap user ([docs/add-user.md](docs/add-user.md)).
 - Cloudflare API token in `caddy_cloudflare_api_token`: Zone.Zone Read and Zone.DNS Edit on `antoinejosset.fr`.
 
 Guest SSH uses `~/.ssh/jarvis_ed25519`.

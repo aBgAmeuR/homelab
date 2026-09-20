@@ -1,0 +1,10 @@
+---
+compose_project_src: ""
+compose_project_dest: ""
+compose_data_dir: ""
+compose_data_owners: {}
+compose_remove_files: []
+compose_templates: []
+compose_health_url: ""
+compose_health_retries: 30
+compose_health_delay: 5

@@ -1,0 +1,16 @@
+---
+# Loaded for both lldap and tinyauth (tinyauth needs LDAP bind settings).
+lldap_http_port: 17170
+lldap_ldap_port: 3890
+lldap_base_dn: dc=antoinejosset,dc=fr
+lldap_admin_user: admin
+lldap_admin_email: "admin@{{ lab_domain }}"
+lldap_bind_user: tinyauth
+lldap_bind_email: "tinyauth@{{ lab_domain }}"
+lldap_bind_dn: "uid={{ lldap_bind_user }},ou=people,{{ lldap_base_dn }}"
+
+tinyauth_port: 3000
+tinyauth_app_url: "https://auth.{{ lab_domain }}"
+tinyauth_trusted_proxies: "192.168.1.113"
+tinyauth_oidc_redirect_uri: "https://monitoring.{{ lab_domain }}/login/generic_oauth"
+tinyauth_oidc_client_name: grafana

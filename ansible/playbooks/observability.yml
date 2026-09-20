@@ -1,0 +1,23 @@
+---
+- name: Observability stack
+  hosts: observability
+  become: true
+  gather_facts: true
+  tags: [observability]
+  pre_tasks:
+    - name: Require Grafana OIDC client pair
+      ansible.builtin.assert:
+        that:
+          - grafana_oidc_client_id is defined
+          - grafana_oidc_client_id | length > 0
+          - grafana_oidc_client_id != "CHANGE_ME"
+          - grafana_oidc_client_secret is defined
+          - grafana_oidc_client_secret | length > 0
+          - grafana_oidc_client_secret != "CHANGE_ME"
+        fail_msg: >-
+          Set grafana_oidc_client_id and grafana_oidc_client_secret in
+          inventory/group_vars/all.sops.yml.
+  roles:
+    - baseline
+    - docker
+    - compose

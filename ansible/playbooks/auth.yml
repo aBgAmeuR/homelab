@@ -1,8 +1,0 @@
----
-- name: Auth stack on CT 114
-  hosts: auth
-  become: true
-  gather_facts: true
-  roles:
-    - common
-    - auth

@@ -1,12 +1,18 @@
 ---
-- name: Configure every guest
+- name: Baseline OS on every guest
+  ansible.builtin.import_playbook: baseline.yml
+
+- name: Docker Engine
+  ansible.builtin.import_playbook: docker.yml
+
+- name: Garage S3
   ansible.builtin.import_playbook: garage.yml
 
-- name: Configure the observability stack
-  ansible.builtin.import_playbook: monitoring.yml
+- name: Identity
+  ansible.builtin.import_playbook: identity.yml
 
-- name: Configure auth (lldap + TinyAuth)
-  ansible.builtin.import_playbook: auth.yml
+- name: Observability
+  ansible.builtin.import_playbook: observability.yml
 
-- name: Configure the reverse proxy
-  ansible.builtin.import_playbook: caddy.yml
+- name: Reverse proxy
+  ansible.builtin.import_playbook: edge.yml

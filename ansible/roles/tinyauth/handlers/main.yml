@@ -1,0 +1,6 @@
+---
+- name: Restart tinyauth
+  ansible.builtin.systemd:
+    name: tinyauth
+    state: restarted
+    daemon_reload: true

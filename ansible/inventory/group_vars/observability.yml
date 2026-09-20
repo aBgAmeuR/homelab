@@ -1,0 +1,39 @@
+---
+compose_project_src: "{{ inventory_dir }}/../../docker/monitoring"
+compose_project_dest: /opt/monitoring
+compose_data_dir: /var/lib/monitoring
+compose_data_owners:
+  grafana: "472"
+  prometheus: "65534"
+  loki: "10001"
+  tempo: "10001"
+  pyroscope: "10001"
+compose_remove_files:
+  - grafana.env.example
+  - pve-exporter.yml.example
+compose_templates:
+  - src: grafana.env.j2
+    dest: grafana.env
+    mode: "0600"
+  - src: pve-exporter.yml.j2
+    dest: pve-exporter.yml
+    mode: "0644"
+  - src: targets-nodes.yml.j2
+    dest: targets/nodes.yml
+    mode: "0644"
+  - src: targets-cadvisor.yml.j2
+    dest: targets/cadvisor.yml
+    mode: "0644"
+compose_health_url: http://127.0.0.1:3000/api/health
+
+monitoring_grafana_admin_user: admin
+monitoring_grafana_oauth_issuer: "https://auth.{{ lab_domain }}"
+monitoring_node_targets:
+  - address: node-exporter:9100
+    instance: monitoring
+monitoring_cadvisor_targets:
+  - address: cadvisor:8080
+    instance: monitoring
+monitoring_pve_user: monitoring@pve
+monitoring_pve_token_name: prometheus
+monitoring_pve_verify_ssl: false

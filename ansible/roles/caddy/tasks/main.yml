@@ -1,12 +1,14 @@
 ---
-- name: Require a Cloudflare API token
+- name: Require Caddy sites and a Cloudflare API token
   ansible.builtin.assert:
     that:
+      - caddy_sites | length > 0
       - caddy_cloudflare_api_token is defined
       - caddy_cloudflare_api_token | length > 0
       - caddy_cloudflare_api_token != "CHANGE_ME"
     fail_msg: >-
-      Set caddy_cloudflare_api_token in inventory/group_vars/caddy.sops.yml
+      Set caddy_sites in inventory/group_vars/reverse_proxies.yml and
+      caddy_cloudflare_api_token in inventory/group_vars/reverse_proxies.sops.yml
       (Zone.Zone Read and Zone.DNS Edit on antoinejosset.fr).
 
 - name: Create the APT keyring directory

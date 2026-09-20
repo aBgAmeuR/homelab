@@ -1,0 +1,17 @@
+---
+- name: Directory
+  hosts: identity_servers
+  become: true
+  gather_facts: true
+  tags: [lldap, identity]
+  roles:
+    - baseline
+    - lldap
+
+- name: OIDC gateway
+  hosts: identity_servers
+  become: true
+  gather_facts: true
+  tags: [tinyauth, identity]
+  roles:
+    - tinyauth

@@ -1,0 +1,13 @@
+---
+tinyauth_version: "v5.1.3"
+tinyauth_download_url: "https://github.com/tinyauthapp/tinyauth/releases/download/{{ tinyauth_version }}/tinyauth-amd64"
+tinyauth_checksum: "sha256:812068e7415ac5f6f7a2a939fdf94d0b70521b890c00de765f253ea1496d042a"
+tinyauth_binary: /usr/local/bin/tinyauth
+tinyauth_env_file: /etc/tinyauth.env
+tinyauth_data_dir: /var/lib/tinyauth
+tinyauth_user: tinyauth
+tinyauth_port: 3000
+tinyauth_app_url: https://auth.antoinejosset.fr
+tinyauth_trusted_proxies: "192.168.1.113"
+tinyauth_oidc_redirect_uri: https://monitoring.antoinejosset.fr/login/generic_oauth
+tinyauth_oidc_client_name: grafana

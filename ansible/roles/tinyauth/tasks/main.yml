@@ -1,0 +1,77 @@
+---
+- name: Require Grafana OIDC client pair
+  ansible.builtin.assert:
+    that:
+      - grafana_oidc_client_id is defined
+      - grafana_oidc_client_id | length > 0
+      - grafana_oidc_client_id != "CHANGE_ME"
+      - grafana_oidc_client_secret is defined
+      - grafana_oidc_client_secret | length > 0
+      - grafana_oidc_client_secret != "CHANGE_ME"
+      - auth_lldap_bind_password is defined
+      - auth_lldap_bind_password | length >= 8
+    fail_msg: >-
+      Set grafana_oidc_client_id and grafana_oidc_client_secret in
+      inventory/group_vars/all.sops.yml, and auth_lldap_bind_password in
+      inventory/group_vars/identity_servers.sops.yml.
+
+- name: Create the tinyauth system user
+  ansible.builtin.user:
+    name: "{{ tinyauth_user }}"
+    system: true
+    home: "{{ tinyauth_data_dir }}"
+    shell: /usr/sbin/nologin
+    create_home: false
+
+- name: Create the tinyauth data directory
+  ansible.builtin.file:
+    path: "{{ tinyauth_data_dir }}"
+    state: directory
+    owner: "{{ tinyauth_user }}"
+    group: "{{ tinyauth_user }}"
+    mode: "0700"
+
+- name: Download pinned TinyAuth binary
+  ansible.builtin.get_url:
+    url: "{{ tinyauth_download_url }}"
+    dest: "{{ tinyauth_binary }}"
+    checksum: "{{ tinyauth_checksum }}"
+    mode: "0755"
+    owner: root
+    group: root
+  notify: Restart tinyauth
+
+- name: Install TinyAuth environment file
+  ansible.builtin.template:
+    src: tinyauth.env.j2
+    dest: "{{ tinyauth_env_file }}"
+    owner: root
+    group: "{{ tinyauth_user }}"
+    mode: "0640"
+  notify: Restart tinyauth
+
+- name: Install TinyAuth systemd unit
+  ansible.builtin.template:
+    src: tinyauth.service.j2
+    dest: /etc/systemd/system/tinyauth.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart tinyauth
+
+- name: Enable and start TinyAuth
+  ansible.builtin.systemd:
+    name: tinyauth
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Apply pending TinyAuth restarts
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait until TinyAuth listens
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: "{{ tinyauth_port }}"
+    delay: 1
+    timeout: 60

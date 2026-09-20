@@ -1,0 +1,9 @@
+---
+- name: Reverse proxy
+  hosts: reverse_proxies
+  become: true
+  gather_facts: true
+  tags: [caddy, edge]
+  roles:
+    - baseline
+    - caddy

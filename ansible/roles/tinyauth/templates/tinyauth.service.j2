@@ -1,0 +1,17 @@
+[Unit]
+Description=TinyAuth
+After=network.target lldap.service
+Wants=lldap.service
+
+[Service]
+Type=simple
+User={{ tinyauth_user }}
+Group={{ tinyauth_user }}
+WorkingDirectory={{ tinyauth_data_dir }}
+EnvironmentFile={{ tinyauth_env_file }}
+ExecStart={{ tinyauth_binary }}
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

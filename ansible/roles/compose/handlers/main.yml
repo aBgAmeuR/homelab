@@ -1,0 +1,10 @@
+---
+- name: Reconcile compose stack
+  ansible.builtin.command:
+    cmd: docker compose up --detach --remove-orphans
+    chdir: "{{ compose_project_dest }}"
+  register: compose_reconcile
+  changed_when: >-
+    'Started' in compose_reconcile.stderr
+    or 'Created' in compose_reconcile.stderr
+    or 'Recreated' in compose_reconcile.stderr

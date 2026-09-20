@@ -19,8 +19,8 @@ tasks:
     cmds:
       - |
         printf '%s\n' \
-          "AWS_ACCESS_KEY_ID=$(sops -d --extract '["garage_s3_access_key"]' {{.TASKFILE_DIR}}/ansible/inventory/group_vars/garage.sops.yml)" \
-          "AWS_SECRET_ACCESS_KEY=$(sops -d --extract '["garage_s3_secret_key"]' {{.TASKFILE_DIR}}/ansible/inventory/group_vars/garage.sops.yml)" \
+          "AWS_ACCESS_KEY_ID=$(sops -d --extract '["garage_s3_access_key"]' {{.TASKFILE_DIR}}/ansible/inventory/group_vars/garage_servers.sops.yml)" \
+          "AWS_SECRET_ACCESS_KEY=$(sops -d --extract '["garage_s3_secret_key"]' {{.TASKFILE_DIR}}/ansible/inventory/group_vars/garage_servers.sops.yml)" \
           "AWS_DEFAULT_REGION=garage" \
           "AWS_EC2_METADATA_DISABLED=true" \
           "TF_VAR_proxmox_api_token=$(sops -d --extract '["proxmox_api_token"]' secrets.sops.yaml)" \

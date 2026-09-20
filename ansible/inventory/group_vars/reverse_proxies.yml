@@ -1,0 +1,8 @@
+---
+caddy_sites:
+  - host: "monitoring.{{ lab_domain }}"
+    upstream: "192.168.1.111:3000"
+    health_path: /api/health
+  - host: "auth.{{ lab_domain }}"
+    upstream: "192.168.1.114:3000"
+    health_path: /api/healthz

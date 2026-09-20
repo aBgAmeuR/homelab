@@ -1,0 +1,9 @@
+---
+- name: Docker Engine on compose hosts
+  hosts: docker_hosts
+  become: true
+  gather_facts: true
+  tags: [docker]
+  roles:
+    - baseline
+    - docker

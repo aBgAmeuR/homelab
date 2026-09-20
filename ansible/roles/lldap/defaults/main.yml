@@ -1,0 +1,20 @@
+---
+lldap_version: "v0.6.3"
+lldap_download_url: "https://github.com/lldap/lldap/releases/download/{{ lldap_version }}/amd64-lldap.tar.gz"
+lldap_checksum: "sha256:e80b50ef39be61de9f1d75182b1e1fa5d82c672261c7e34fd8ffec5455ed3883"
+lldap_install_dir: "/opt/lldap/{{ lldap_version }}"
+lldap_cache: /var/cache/lldap/amd64-lldap.tar.gz
+lldap_binary: /usr/local/bin/lldap
+lldap_set_password_binary: /usr/local/bin/lldap_set_password
+lldap_config: /etc/lldap.toml
+lldap_env_file: /etc/lldap.env
+lldap_data_dir: /var/lib/lldap
+lldap_user: lldap
+lldap_http_port: 17170
+lldap_ldap_port: 3890
+lldap_base_dn: dc=antoinejosset,dc=fr
+lldap_admin_user: admin
+lldap_admin_email: admin@antoinejosset.fr
+lldap_bind_user: tinyauth
+lldap_bind_email: tinyauth@antoinejosset.fr
+lldap_bind_dn: "uid={{ lldap_bind_user }},ou=people,{{ lldap_base_dn }}"
