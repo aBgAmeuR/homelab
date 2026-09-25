@@ -40,6 +40,20 @@ firewall_extra_rules = {
       source  = "192.168.1.113"
       comment = "Grafana from Caddy"
     },
+    {
+      type    = "in"
+      action  = "ACCEPT"
+      dport   = "4317"
+      source  = "192.168.1.113"
+      comment = "OTLP gRPC from Caddy"
+    },
+    {
+      type    = "in"
+      action  = "ACCEPT"
+      dport   = "4318"
+      source  = "192.168.1.113"
+      comment = "OTLP HTTP from Caddy"
+    },
   ]
 
   garage = [

@@ -40,7 +40,7 @@ Terraform owns the Proxmox object: VMID, resources, NIC, static IP, root SSH key
 
 ## Observability
 
-CT 111 runs Docker Engine and one Compose project. Grafana answers on `https://monitoring.antoinejosset.fr` via Caddy (CT 113). Certificates come from Let's Encrypt using a Cloudflare DNS-01 challenge. Guest firewall allows Grafana `:3000` from Caddy (`192.168.1.113`) only.
+CT 111 runs Docker Engine and one Compose project. Grafana answers on `https://monitoring.antoinejosset.fr` via Caddy (CT 113). Certificates come from Let's Encrypt using a Cloudflare DNS-01 challenge. The guest firewall allows Grafana `:3000` and the collector (`:4317`, `:4318` on `192.168.1.111`) from Caddy (`192.168.1.113`) only.
 
 | Signal | Source |
 | --- | --- |

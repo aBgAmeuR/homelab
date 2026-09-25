@@ -8,3 +8,6 @@ caddy_env_file: /etc/caddy/caddy.env
 caddy_systemd_override_dir: /etc/systemd/system/caddy.service.d
 caddy_cloudflare_package: github.com/caddy-dns/cloudflare
 caddy_sites: []
+caddy_otel_service_name: caddy
+caddy_otlp_metrics_endpoint: "http://{{ caddy_otel_collector_host }}:4318/v1/metrics"
+caddy_otlp_traces_endpoint: "http://{{ caddy_otel_collector_host }}:4317"
