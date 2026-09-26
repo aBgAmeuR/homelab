@@ -14,5 +14,8 @@
 - name: Observability
   ansible.builtin.import_playbook: observability.yml
 
+- name: Docker host stacks
+  ansible.builtin.import_playbook: docker-host.yml
+
 - name: Reverse proxy
   ansible.builtin.import_playbook: edge.yml

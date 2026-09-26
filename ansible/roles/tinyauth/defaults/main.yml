@@ -9,5 +9,14 @@ tinyauth_user: tinyauth
 tinyauth_port: 3000
 tinyauth_app_url: https://auth.antoinejosset.fr
 tinyauth_trusted_proxies: "192.168.1.113"
-tinyauth_oidc_redirect_uri: https://monitoring.antoinejosset.fr/login/generic_oauth
-tinyauth_oidc_client_name: grafana
+tinyauth_oidc_clients:
+  - env_name: GRAFANA
+    client_id: "{{ grafana_oidc_client_id }}"
+    client_secret: "{{ grafana_oidc_client_secret }}"
+    redirect_uri: https://monitoring.antoinejosset.fr/login/generic_oauth
+    display_name: Grafana
+  - env_name: FILEBROWSER
+    client_id: "{{ filebrowser_oidc_client_id }}"
+    client_secret: "{{ filebrowser_oidc_client_secret }}"
+    redirect_uri: https://filebrowser.antoinejosset.fr/api/auth/oidc/callback
+    display_name: File Browser

@@ -1,0 +1,15 @@
+name: filebrowser
+
+services:
+  filebrowser:
+    restart: unless-stopped
+    image: gtstef/filebrowser:1.5.6-stable
+    user: "1000:1000"
+    env_file:
+      - filebrowser.env
+    volumes:
+      - /var/lib/filebrowser/data:/home/filebrowser/data
+      - ./config.yaml:/home/filebrowser/data/config.yaml:ro
+      - /mnt/filebrowser:/srv
+    ports:
+      - "0.0.0.0:8090:80"

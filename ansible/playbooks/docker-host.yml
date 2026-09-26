@@ -1,0 +1,87 @@
+---
+- name: File Browser
+  hosts: docker
+  become: true
+  gather_facts: true
+  tags: [filebrowser, docker-host]
+  vars:
+    compose_project_src: "{{ inventory_dir }}/../../docker/host/filebrowser"
+    compose_project_dest: /opt/filebrowser
+    compose_data_dir: /var/lib/filebrowser
+    compose_data_owners:
+      data: "1000"
+    compose_templates:
+      - src: filebrowser.env.j2
+        dest: filebrowser.env
+        mode: "0600"
+    compose_health_url: http://127.0.0.1:8090/health
+  pre_tasks:
+    - name: Require the File Browser OIDC client pair
+      ansible.builtin.assert:
+        that:
+          - filebrowser_oidc_client_id is defined
+          - filebrowser_oidc_client_id | length > 0
+          - filebrowser_oidc_client_id != "CHANGE_ME"
+          - filebrowser_oidc_client_secret is defined
+          - filebrowser_oidc_client_secret | length > 0
+          - filebrowser_oidc_client_secret != "CHANGE_ME"
+          - filebrowser_admin_password is defined
+          - filebrowser_admin_password | length >= 8
+        fail_msg: >-
+          Set filebrowser_oidc_client_id, filebrowser_oidc_client_secret and
+          filebrowser_admin_password in inventory/group_vars/all.sops.yml.
+
+    - name: Look up the filebrowser dataset mount
+      ansible.builtin.command:
+        cmd: findmnt --mountpoint /mnt/filebrowser --noheadings --output SOURCE
+      register: filebrowser_mount
+      changed_when: false
+      failed_when: false
+
+    - name: The filebrowser dataset must be bind-mounted from the host
+      ansible.builtin.fail:
+        msg: >-
+          /mnt/filebrowser is not a mount of /hdd/filebrowser
+          (found: {{ filebrowser_mount.stdout | default('nothing') }}).
+          On CT 115 as root@pam, set mp0 to
+          /hdd/filebrowser,mp=/mnt/filebrowser.
+      when: >-
+        filebrowser_mount.rc != 0
+        or (
+          '/hdd/filebrowser' not in (filebrowser_mount.stdout | default(''))
+          and 'hdd[/filebrowser]' not in (filebrowser_mount.stdout | default(''))
+        )
+
+    - name: Check that uid 1000 can write the filebrowser dataset
+      ansible.builtin.command:
+        cmd: setpriv --reuid=1000 --regid=1000 --clear-groups test -w /mnt/filebrowser
+      register: filebrowser_dataset_writable
+      changed_when: false
+      failed_when: false
+
+    - name: The filebrowser dataset must be owned by the unprivileged uid
+      ansible.builtin.fail:
+        msg: >-
+          /mnt/filebrowser is not writable by uid 1000. On the Proxmox host run
+          chown 101000:101000 /hdd/filebrowser && chmod 755 /hdd/filebrowser
+      when: filebrowser_dataset_writable.rc != 0
+  roles:
+    - baseline
+    - docker
+    - compose
+
+- name: Host exporters
+  hosts: docker
+  become: true
+  gather_facts: true
+  tags: [exporters, docker-host]
+  vars:
+    compose_project_src: "{{ inventory_dir }}/../../docker/host/exporters"
+    compose_project_dest: /opt/exporters
+    compose_data_dir: ""
+    compose_data_owners: {}
+    compose_remove_files: []
+    compose_templates: []
+    compose_health_url: http://127.0.0.1:9100/metrics
+  roles:
+    - compose

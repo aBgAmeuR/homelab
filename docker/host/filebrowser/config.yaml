@@ -1,0 +1,45 @@
+server:
+  port: 80
+  baseURL: /
+  externalUrl: https://filebrowser.antoinejosset.fr
+  disableUpdateCheck: true
+  sources:
+    - path: /srv
+      name: files
+      config:
+        defaultEnabled: true
+        defaultUserScope: /
+        createUserDir: false
+        private: true
+
+http:
+  trustedHeaders:
+    - X-Forwarded-For
+
+frontend:
+  name: Files
+
+auth:
+  methods:
+    password:
+      enabled: false
+    oidc:
+      enabled: true
+      issuerUrl: https://auth.antoinejosset.fr
+      scopes: "openid profile email groups"
+      userIdentifier: preferred_username
+      groupsClaim: groups
+      adminGroup: admin
+      userGroups:
+        - user
+        - admin
+
+userDefaults:
+  permissions:
+    admin: false
+    modify: true
+    share: false
+    api: false
+    delete: true
+    create: true
+    download: true

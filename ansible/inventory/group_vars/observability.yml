@@ -31,9 +31,13 @@ monitoring_grafana_oauth_issuer: "https://auth.{{ lab_domain }}"
 monitoring_node_targets:
   - address: node-exporter:9100
     instance: monitoring
+  - address: 192.168.1.115:9100
+    instance: docker
 monitoring_cadvisor_targets:
   - address: cadvisor:8080
     instance: monitoring
+  - address: 192.168.1.115:8080
+    instance: docker
 monitoring_pve_user: monitoring@pve
 monitoring_pve_token_name: prometheus
 monitoring_pve_verify_ssl: false

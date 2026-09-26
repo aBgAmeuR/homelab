@@ -7,3 +7,6 @@ caddy_sites:
   - host: "auth.{{ lab_domain }}"
     upstream: "192.168.1.114:3000"
     health_path: /api/healthz
+  - host: "filebrowser.{{ lab_domain }}"
+    upstream: "192.168.1.115:8090"
+    health_path: /health

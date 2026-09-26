@@ -26,6 +26,12 @@ resource "proxmox_virtual_environment_container" "this" {
     size         = each.value.disk_size
   }
 
+  # Host bind mounts are rejected for any API user other than root@pam.
+  # Add them in the Proxmox UI. Ignoring the block keeps a UI mount in place.
+  lifecycle {
+    ignore_changes = [mount_point]
+  }
+
   operating_system {
     template_file_id = each.value.template
     type             = "debian"

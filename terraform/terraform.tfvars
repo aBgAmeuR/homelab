@@ -29,6 +29,13 @@ containers = {
     template    = "local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst"
     description = "TinyAuth + lldap (Managed by Terraform)"
   }
+  docker = {
+    vmid        = 115, hostname = "docker", ip_address = "192.168.1.115/24", gateway = "192.168.1.1"
+    cores       = 2, memory = 4096, swap = 1024, disk_size = 32
+    template    = "local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst"
+    nesting     = true
+    description = "Docker host (Managed by Terraform)"
+  }
 }
 
 firewall_extra_rules = {
@@ -90,6 +97,30 @@ firewall_extra_rules = {
       dport   = "3000"
       source  = "192.168.1.113"
       comment = "TinyAuth from Caddy"
+    },
+  ]
+
+  docker = [
+    {
+      type    = "in"
+      action  = "ACCEPT"
+      dport   = "8090"
+      source  = "192.168.1.113"
+      comment = "File Browser from Caddy"
+    },
+    {
+      type    = "in"
+      action  = "ACCEPT"
+      dport   = "9100"
+      source  = "192.168.1.111"
+      comment = "node-exporter from Prometheus"
+    },
+    {
+      type    = "in"
+      action  = "ACCEPT"
+      dport   = "8080"
+      source  = "192.168.1.111"
+      comment = "cAdvisor from Prometheus"
     },
   ]
 }

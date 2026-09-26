@@ -1,5 +1,5 @@
 ---
-- name: Require Grafana OIDC client pair
+- name: Require TinyAuth OIDC client pairs
   ansible.builtin.assert:
     that:
       - grafana_oidc_client_id is defined
@@ -8,10 +8,17 @@
       - grafana_oidc_client_secret is defined
       - grafana_oidc_client_secret | length > 0
       - grafana_oidc_client_secret != "CHANGE_ME"
+      - filebrowser_oidc_client_id is defined
+      - filebrowser_oidc_client_id | length > 0
+      - filebrowser_oidc_client_id != "CHANGE_ME"
+      - filebrowser_oidc_client_secret is defined
+      - filebrowser_oidc_client_secret | length > 0
+      - filebrowser_oidc_client_secret != "CHANGE_ME"
       - auth_lldap_bind_password is defined
       - auth_lldap_bind_password | length >= 8
     fail_msg: >-
-      Set grafana_oidc_client_id and grafana_oidc_client_secret in
+      Set grafana_oidc_client_id, grafana_oidc_client_secret,
+      filebrowser_oidc_client_id and filebrowser_oidc_client_secret in
       inventory/group_vars/all.sops.yml, and auth_lldap_bind_password in
       inventory/group_vars/identity_servers.sops.yml.
 
