@@ -1,0 +1,35 @@
+name: harmony
+
+services:
+  harmony:
+    restart: unless-stopped
+    image: ghcr.io/abgameur/harmony:latest
+    env_file:
+      - harmony.env
+    environment:
+      OTEL_SERVICE_NAME: harmony
+      OTEL_RESOURCE_ATTRIBUTES: deployment.environment=production
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://192.168.1.111:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_TRACES_SAMPLER: parentbased_always_on
+      OTEL_METRIC_EXPORT_INTERVAL: "30000"
+      OTEL_SDK_DISABLED: "false"
+      LOG_FORMAT: json
+    ports:
+      - "127.0.0.1:3000:3000"
+    healthcheck:
+      test: ["CMD", "/app/server", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+  cloudflared:
+    restart: unless-stopped
+    image: cloudflare/cloudflared:2026.9.3
+    command: tunnel --no-autoupdate run
+    env_file:
+      - harmony.env
+    depends_on:
+      harmony:
+        condition: service_healthy

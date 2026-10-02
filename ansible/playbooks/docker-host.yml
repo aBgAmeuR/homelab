@@ -85,3 +85,38 @@
     compose_health_url: http://127.0.0.1:9100/metrics
   roles:
     - compose
+
+- name: Harmony
+  hosts: docker
+  become: true
+  gather_facts: true
+  tags: [harmony, docker-host]
+  vars:
+    compose_project_src: "{{ inventory_dir }}/../../docker/host/harmony"
+    compose_project_dest: /opt/harmony
+    compose_data_dir: ""
+    compose_data_owners: {}
+    compose_remove_files: []
+    compose_templates:
+      - src: harmony.env.j2
+        dest: harmony.env
+        mode: "0600"
+    compose_health_url: http://127.0.0.1:3000/health
+    harmony_project_dir: "{{ compose_project_dest }}"
+  pre_tasks:
+    - name: Require the Harmony environment
+      ansible.builtin.assert:
+        that:
+          - harmony_env is defined
+          - harmony_env | trim | length > 0
+          - "'CHANGE_ME' not in harmony_env"
+          - "'TUNNEL_TOKEN=' in harmony_env"
+        fail_msg: >-
+          Set harmony_env in inventory/host_vars/docker.sops.yml to the Harmony
+          dotenv, including TUNNEL_TOKEN. Ansible writes it to
+          {{ compose_project_dest }}/harmony.env.
+  roles:
+    - baseline
+    - docker
+    - compose
+    - harmony

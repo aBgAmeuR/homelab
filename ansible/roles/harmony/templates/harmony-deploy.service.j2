@@ -1,0 +1,11 @@
+[Unit]
+Description=Pull and restart Harmony
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory={{ harmony_project_dir }}
+ExecStart=/usr/bin/docker compose pull {{ harmony_service_name }}
+ExecStart=/usr/bin/docker compose up --detach --remove-orphans {{ harmony_service_name }}
+TimeoutStartSec=180

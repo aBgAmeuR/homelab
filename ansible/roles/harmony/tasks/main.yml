@@ -1,0 +1,28 @@
+---
+- name: Install the Harmony deploy service
+  ansible.builtin.template:
+    src: harmony-deploy.service.j2
+    dest: /etc/systemd/system/harmony-deploy.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart harmony deploy timer
+
+- name: Install the Harmony deploy timer
+  ansible.builtin.template:
+    src: harmony-deploy.timer.j2
+    dest: /etc/systemd/system/harmony-deploy.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart harmony deploy timer
+
+- name: Enable the Harmony deploy timer
+  ansible.builtin.systemd:
+    name: harmony-deploy.timer
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Apply pending Harmony timer restarts
+  ansible.builtin.meta: flush_handlers

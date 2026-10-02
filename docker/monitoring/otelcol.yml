@@ -23,6 +23,22 @@ exporters:
     tls:
       insecure: true
 
+connectors:
+  span_metrics:
+    histogram:
+      unit: s
+      explicit:
+        buckets: [5ms, 10ms, 25ms, 50ms, 100ms, 250ms, 500ms, 1s, 2s, 5s, 10s]
+    dimensions:
+      - name: http.route
+      - name: http.request.method
+      - name: http.response.status_code
+    exclude_dimensions:
+      - collector.instance.id
+    exemplars:
+      enabled: true
+    metrics_flush_interval: 30s
+
 extensions:
   health_check:
     endpoint: 0.0.0.0:13133
@@ -40,7 +56,7 @@ service:
                 port: 8888
   pipelines:
     metrics:
-      receivers: [otlp]
+      receivers: [otlp, span_metrics]
       processors: [memory_limiter, batch]
       exporters: [otlp_http/metrics]
     logs:
@@ -50,4 +66,4 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [otlp_grpc/traces]
+      exporters: [otlp_grpc/traces, span_metrics]

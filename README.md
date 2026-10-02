@@ -37,11 +37,11 @@ Terraform owns the Proxmox object: VMID, resources, NIC, static IP, root SSH key
 | 112 | 192.168.1.112 | garage | Terraform state, S3 on :3900 |
 | 113 | 192.168.1.113 | caddy | Reverse proxy |
 | 114 | 192.168.1.114 | auth | lldap + TinyAuth |
-| 115 | 192.168.1.115 | docker | Compose host: File Browser, node-exporter, cAdvisor |
+| 115 | 192.168.1.115 | docker | Compose host: Harmony, File Browser, node-exporter, cAdvisor |
 
 ## Observability
 
-CT 111 runs Docker Engine and one Compose project. Grafana answers on `https://monitoring.antoinejosset.fr` via Caddy (CT 113). Certificates come from Let's Encrypt using a Cloudflare DNS-01 challenge. The guest firewall allows Grafana `:3000` and the collector (`:4317`, `:4318` on `192.168.1.111`) from Caddy (`192.168.1.113`) only.
+CT 111 runs Docker Engine and one Compose project. Grafana answers on `https://monitoring.antoinejosset.fr` via Caddy (CT 113). Certificates come from Let's Encrypt using a Cloudflare DNS-01 challenge. The guest firewall allows Grafana `:3000` from Caddy (`192.168.1.113`) only. The collector (`:4317`, `:4318` on `192.168.1.111`) accepts OTLP from the LAN (`192.168.1.0/24`).
 
 | Signal | Source |
 | --- | --- |
@@ -49,7 +49,19 @@ CT 111 runs Docker Engine and one Compose project. Grafana answers on `https://m
 | Container metrics | cAdvisor on CT 111 and CT 115 |
 | Proxmox metrics | pve-exporter reading the API on 192.168.1.40 |
 | Stack health | Loki, Tempo, Pyroscope and the collector scrape themselves |
-| Metrics, logs, traces from applications | OTLP collector, ready to ingest |
+| Harmony | OTLP from CT 115 to the collector on `:4318`. Traces in Tempo, logs in Loki, RED metrics from server spans |
+
+Harmony sends traces, logs, and metrics to `http://192.168.1.111:4318` (`service.name=harmony`, `deployment.environment=production`). The collector keeps full traces in Tempo, logs in Loki, and builds request, error, and duration metrics from server spans. Grafana dashboard **Harmony** reads those metrics and logs. From a trace, Grafana opens the matching Loki lines; from a log line, it opens the Tempo trace.
+
+## Harmony
+
+CT 115 runs Harmony (`ghcr.io/abgameur/harmony:latest`) and `cloudflared` from `docker/host/harmony`. The app listens on port 3000. `GET /health` returns `OK`. The image is distroless, so the compose healthcheck is `/app/server healthcheck` (same probe as the Dockerfile). `cloudflared` starts only after that check passes. The port is published on the guest loopback (`127.0.0.1:3000`) so the playbook can wait on `http://127.0.0.1:3000/health`. No firewall rule opens it.
+
+Public access is a Cloudflare tunnel. The public hostname and the origin `http://harmony:3000` are set in Cloudflare Zero Trust. `TUNNEL_TOKEN` is part of `harmony_env` in `inventory/host_vars/docker.sops.yml`. A systemd timer on CT 115 pulls the Harmony image every 5 minutes.
+
+```bash
+task ansible -- playbooks/docker-host.yml --tags harmony
+```
 
 ## Auth
 
@@ -77,6 +89,7 @@ sops ansible/inventory/group_vars/garage_servers.sops.yml
 sops ansible/inventory/group_vars/observability.sops.yml
 sops ansible/inventory/group_vars/reverse_proxies.sops.yml
 sops ansible/inventory/group_vars/identity_servers.sops.yml
+sops ansible/inventory/host_vars/docker.sops.yml
 ```
 
 ## Done by hand
@@ -90,5 +103,6 @@ Terraform does not manage Proxmox users, tokens or DNS.
 - On the Proxmox host, once: `chown 101000:101000 /hdd/filebrowser && chmod 755 /hdd/filebrowser`. The File Browser image writes as uid 1000, which an unprivileged CT maps to host uid 101000.
 - After the identity playbook: lldap user ([docs/add-user.md](docs/add-user.md)).
 - Cloudflare API token in `caddy_cloudflare_api_token`: Zone.Zone Read and Zone.DNS Edit on `antoinejosset.fr`.
+- Cloudflare tunnel for Harmony: public hostname and origin `http://harmony:3000` in Zero Trust. The token stays in `harmony_env`.
 
 Guest SSH uses `~/.ssh/jarvis_ed25519`.

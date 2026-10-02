@@ -1,0 +1,6 @@
+---
+- name: Restart harmony deploy timer
+  ansible.builtin.systemd:
+    name: harmony-deploy.timer
+    state: restarted
+    daemon_reload: true
