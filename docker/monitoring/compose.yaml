@@ -114,6 +114,6 @@ services:
 
   pve-exporter:
     restart: unless-stopped
-    image: prompve/prometheus-pve-exporter:3.10.0
+    image: prompve/prometheus-pve-exporter:3.10.1
     volumes:
       - ./pve-exporter.yml:/etc/prometheus/pve.yml:ro
