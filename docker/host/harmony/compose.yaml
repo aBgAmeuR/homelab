@@ -26,7 +26,7 @@ services:
 
   cloudflared:
     restart: unless-stopped
-    image: cloudflare/cloudflared:2026.9.3
+    image: cloudflare/cloudflared:2026.10.0
     command: tunnel --no-autoupdate run
     env_file:
       - harmony.env
