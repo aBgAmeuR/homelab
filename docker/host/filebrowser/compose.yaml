@@ -3,7 +3,7 @@ name: filebrowser
 services:
   filebrowser:
     restart: unless-stopped
-    image: gtstef/filebrowser:1.5.6-stable
+    image: gtstef/filebrowser:1.5.8-stable
     user: "1000:1000"
     env_file:
       - filebrowser.env
