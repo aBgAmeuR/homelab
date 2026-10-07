@@ -23,3 +23,8 @@ tinyauth_oidc_clients:
     client_secret: "{{ filebrowser_oidc_client_secret }}"
     redirect_uri: "https://filebrowser.{{ lab_domain }}/api/auth/oidc/callback"
     display_name: File Browser
+  - env_name: PROXMOX
+    client_id: "{{ proxmox_oidc_client_id }}"
+    client_secret: "{{ proxmox_oidc_client_secret }}"
+    redirect_uri: "https://proxmox.antoinejosset.fr"
+    display_name: Proxmox
