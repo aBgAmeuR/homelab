@@ -37,7 +37,7 @@ Terraform owns the Proxmox object: VMID, resources, NIC, static IP, root SSH key
 | 112 | 192.168.1.112 | garage | Terraform state, S3 on :3900 |
 | 113 | 192.168.1.113 | caddy | Reverse proxy |
 | 114 | 192.168.1.114 | auth | lldap + TinyAuth |
-| 115 | 192.168.1.115 | docker | Compose host: Harmony, File Browser, node-exporter, cAdvisor |
+| 115 | 192.168.1.115 | docker | Compose host: Harmony, File Browser, AFFiNE, node-exporter, cAdvisor |
 
 ## Observability
 
@@ -63,11 +63,32 @@ Public access is a Cloudflare tunnel. The public hostname and the origin `http:/
 task ansible -- playbooks/docker-host.yml --tags harmony
 ```
 
+## AFFiNE
+
+CT 115 runs AFFiNE (`ghcr.io/toeverything/affine:stable`) with Postgres (`pgvector/pgvector:pg16`) and Redis. The app listens on port 3010. `GET /info` returns the server version. Postgres and Redis stay on the Compose network and are not published. Postgres uses trust authentication on that network only. Blobs are in `/var/lib/affine/storage`, the database in `/var/lib/affine/postgres`.
+
+Caddy publishes `https://docs.antoinejosset.fr`. Login is TinyAuth OIDC. The issuer is `https://auth.antoinejosset.fr` and the redirect URI is `https://docs.antoinejosset.fr/oauth/callback`. `allowPrivateNetwork` is set because that issuer resolves to Caddy on the LAN. Password sign-up is off. The playbook creates `affine@antoinejosset.fr` once; that password account is break-glass. An OIDC sign-in creates a normal user. Promote that user from the admin panel.
+
+The guest firewall allows `:3010` from Caddy only. Apply the firewall before the edge playbook, or the Caddy health check cannot reach AFFiNE.
+
+```bash
+task terraform -- apply
+task ansible -- playbooks/identity.yml --tags tinyauth
+task ansible -- playbooks/docker-host.yml --tags affine
+task ansible -- playbooks/edge.yml
+```
+
+```bash
+sops -d --extract '["affine_admin_password"]' ansible/inventory/group_vars/all.sops.yml
+```
+
 ## Auth
 
 CT 114 runs lldap and TinyAuth as systemd units (no Docker). Caddy publishes `https://auth.antoinejosset.fr` to TinyAuth on `192.168.1.114:3000`. lldap listens on localhost only (LDAP 3890, UI 17170). Groups `admin` and `user` are homelab-wide. Grafana Generic OAuth uses TinyAuth as the OIDC issuer; the local Grafana `admin` password stays as break-glass.
 
-Apply order: Terraform 114 → DNS → `playbooks/identity.yml` → `playbooks/edge.yml`. Grafana and File Browser are TinyAuth OIDC clients. Both client pairs live in `inventory/group_vars/all.sops.yml`.
+Apply order: Terraform 114 → DNS → `playbooks/identity.yml` → `playbooks/edge.yml`. Grafana, File Browser, Proxmox, and AFFiNE are TinyAuth OIDC clients. The client pairs live in `inventory/group_vars/all.sops.yml`.
+
+Proxmox VE logs in through an OpenID realm named `tinyauth`. The browser must open `https://proxmox.antoinejosset.fr`: that origin is the redirect URI TinyAuth trusts. The issuer URL is `https://auth.antoinejosset.fr` with no path. Discovery then sends the browser to `https://auth.antoinejosset.fr/authorize`. `--username-claim username` maps the lldap uid (`preferred_username`) to `name@tinyauth`. There is no group mapping. `root@pam` stays the break-glass login. The node itself must resolve `auth.antoinejosset.fr` to Caddy (`192.168.1.113`). If it still reaches Nginx Proxy Manager on `192.168.1.100`, discovery comes from Authelia and the browser is sent to `/api/oidc/authorization`, which TinyAuth does not serve.
 
 Add user in lldap: [docs/add-user.md](docs/add-user.md).
 
@@ -98,7 +119,26 @@ Terraform does not manage Proxmox users, tokens or DNS.
 
 - Proxmox API user `terraform@pve` with `PVEAdmin` and `PVESysAdmin` on `/`, propagated.
 - Proxmox API user `monitoring@pve` with a privilege-separated token, `PVEAuditor` on `/`. The token secret goes into `monitoring_pve_token_value`.
-- Pi-hole A records for `garage`, `caddy`, and `monitoring`. `auth.antoinejosset.fr` and `filebrowser.antoinejosset.fr` must resolve to Caddy (`192.168.1.113`), not to CT 114 or CT 115.
+- Proxmox OpenID realm, after `playbooks/identity.yml`. From the repo root, read the client pair, then on the Proxmox host:
+
+```bash
+sops -d --extract '["proxmox_oidc_client_id"]' ansible/inventory/group_vars/all.sops.yml
+sops -d --extract '["proxmox_oidc_client_secret"]' ansible/inventory/group_vars/all.sops.yml
+```
+
+```bash
+pveum realm add tinyauth --type openid \
+  --issuer-url https://auth.antoinejosset.fr \
+  --client-id CLIENT_ID \
+  --client-key CLIENT_SECRET \
+  --username-claim username \
+  --autocreate 1 \
+  --scopes 'email profile' \
+  --comment 'TinyAuth'
+```
+
+`username-claim` cannot be changed later. The first login creates `name@tinyauth` with no role. Grant one on the host, for example `pveum acl modify / --users name@tinyauth --roles Administrator --propagate 1`.
+- Pi-hole A records for `garage`, `caddy`, and `monitoring`. `auth.antoinejosset.fr`, `filebrowser.antoinejosset.fr`, and `docs.antoinejosset.fr` must resolve to Caddy (`192.168.1.113`), not to CT 114 or CT 115.
 - On CT 115, as `root@pam`: mount point `mp0` with `/hdd/filebrowser,mp=/mnt/filebrowser`. The API token cannot set a host bind mount. Terraform ignores `mount_point` so a later apply does not remove it.
 - On the Proxmox host, once: `chown 101000:101000 /hdd/filebrowser && chmod 755 /hdd/filebrowser`. The File Browser image writes as uid 1000, which an unprivileged CT maps to host uid 101000.
 - After the identity playbook: lldap user ([docs/add-user.md](docs/add-user.md)).

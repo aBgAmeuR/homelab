@@ -10,3 +10,6 @@ caddy_sites:
   - host: "filebrowser.{{ lab_domain }}"
     upstream: "192.168.1.115:8090"
     health_path: /health
+  - host: "docs.{{ lab_domain }}"
+    upstream: "192.168.1.115:3010"
+    health_path: /info

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://github.com/toeverything/affine/releases/latest/download/config.schema.json",
+  "server": {
+    "name": "Docs",
+    "externalUrl": "https://docs.{{ lab_domain }}"
+  },
+  "auth": {
+    "allowSignup": false,
+    "allowSignupForOauth": true
+  },
+  "oauth": {
+    "providers": {
+      "oidc": {
+        "issuer": "https://auth.{{ lab_domain }}",
+        "clientId": {{ affine_oidc_client_id | to_json }},
+        "clientSecret": {{ affine_oidc_client_secret | to_json }},
+        "allowPrivateNetwork": true,
+        "args": {
+          "scope": "openid profile email"
+        }
+      }
+    }
+  }
+}

@@ -120,3 +120,60 @@
     - docker
     - compose
     - harmony
+
+- name: AFFiNE
+  hosts: docker
+  become: true
+  gather_facts: true
+  tags: [affine, docker-host]
+  vars:
+    compose_project_src: "{{ inventory_dir }}/../../docker/host/affine"
+    compose_project_dest: /opt/affine
+    compose_data_dir: /var/lib/affine
+    compose_data_owners:
+      postgres: "999"
+      storage: "0"
+    compose_remove_files: []
+    compose_templates:
+      - src: affine-config.json.j2
+        dest: config/config.json
+        mode: "0600"
+    compose_health_url: http://127.0.0.1:3010/info
+    compose_health_retries: 60
+  pre_tasks:
+    - name: Require the AFFiNE OIDC client pair
+      ansible.builtin.assert:
+        that:
+          - affine_oidc_client_id is defined
+          - affine_oidc_client_id | length > 0
+          - affine_oidc_client_id != "CHANGE_ME"
+          - affine_oidc_client_secret is defined
+          - affine_oidc_client_secret | length > 0
+          - affine_oidc_client_secret != "CHANGE_ME"
+          - affine_admin_password is defined
+          - affine_admin_password | length >= 8
+          - affine_admin_password | length <= 64
+        fail_msg: >-
+          Set affine_oidc_client_id, affine_oidc_client_secret and
+          affine_admin_password in inventory/group_vars/all.sops.yml.
+  roles:
+    - baseline
+    - docker
+    - compose
+  post_tasks:
+    - name: Create the first AFFiNE admin
+      ansible.builtin.uri:
+        url: http://127.0.0.1:3010/api/setup/create-admin-user
+        method: POST
+        body_format: json
+        return_content: true
+        body:
+          name: admin
+          email: "affine@{{ lab_domain }}"
+          password: "{{ affine_admin_password }}"
+        status_code: [200, 403]
+      register: affine_setup
+      changed_when: affine_setup.status == 200
+      failed_when: >-
+        affine_setup.status == 403
+        and 'First user already created' not in (affine_setup.content | default(''))

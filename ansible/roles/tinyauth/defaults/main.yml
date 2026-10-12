@@ -25,3 +25,8 @@ tinyauth_oidc_clients:
     client_secret: "{{ proxmox_oidc_client_secret }}"
     redirect_uri: https://proxmox.antoinejosset.fr
     display_name: Proxmox
+  - env_name: AFFINE
+    client_id: "{{ affine_oidc_client_id }}"
+    client_secret: "{{ affine_oidc_client_secret }}"
+    redirect_uri: https://docs.antoinejosset.fr/oauth/callback
+    display_name: Docs

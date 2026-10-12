@@ -111,6 +111,13 @@ firewall_extra_rules = {
     {
       type    = "in"
       action  = "ACCEPT"
+      dport   = "3010"
+      source  = "192.168.1.113"
+      comment = "AFFiNE from Caddy"
+    },
+    {
+      type    = "in"
+      action  = "ACCEPT"
       dport   = "9100"
       source  = "192.168.1.111"
       comment = "node-exporter from Prometheus"
