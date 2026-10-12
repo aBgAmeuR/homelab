@@ -3,8 +3,6 @@ version: "3"
 env:
   SOPS_AGE_KEY_FILE:
     sh: printf '%s' "${SOPS_AGE_KEY_FILE:-$HOME/.config/sops/age/keys.txt}"
-  PATH:
-    sh: printf '%s:%s' "$HOME/.local/bin" "$PATH"
 
 tasks:
   default:
@@ -12,57 +10,51 @@ tasks:
     cmds:
       - task --list
 
-  tf-secrets:
-    silent: true
-    desc: "Decrypt Terraform secrets into .env"
-    dir: terraform
+  tf:init:
+    desc: terraform init
     cmds:
-      - |
-        printf '%s\n' \
-          "AWS_ACCESS_KEY_ID=$(sops -d --extract '["garage_s3_access_key"]' {{.TASKFILE_DIR}}/ansible/inventory/group_vars/garage_servers.sops.yml)" \
-          "AWS_SECRET_ACCESS_KEY=$(sops -d --extract '["garage_s3_secret_key"]' {{.TASKFILE_DIR}}/ansible/inventory/group_vars/garage_servers.sops.yml)" \
-          "AWS_DEFAULT_REGION=garage" \
-          "AWS_EC2_METADATA_DISABLED=true" \
-          "TF_VAR_proxmox_api_token=$(sops -d --extract '["proxmox_api_token"]' secrets.sops.yaml)" \
-          > .env
+      - task: tf
+        vars: { CMD: init }
 
-  tf-init:
-    desc: "terraform init"
-    dir: terraform
-    deps: [tf-secrets]
-    dotenv: [.env]
+  tf:plan:
+    desc: terraform plan (extra flags after --)
     cmds:
-      - terraform init
+      - task: tf
+        vars: { CMD: plan }
 
-  tf-plan:
-    desc: "terraform plan"
-    dir: terraform
-    deps: [tf-secrets]
-    dotenv: [.env]
+  tf:apply:
+    desc: terraform apply (extra flags after --)
     cmds:
-      - terraform plan
-
-  tf-apply:
-    desc: "terraform apply"
-    dir: terraform
-    deps: [tf-secrets]
-    dotenv: [.env]
-    cmds:
-      - terraform apply
+      - task: tf
+        vars: { CMD: apply }
 
   ansible:
-    desc: "ansible-playbook ..."
+    desc: ansible-playbook (playbook and flags after --)
     dir: ansible
     cmds:
       - ansible-playbook {{.CLI_ARGS}}
 
   check:
-    desc: "Format Terraform and syntax-check the playbooks"
-    deps: [tf-secrets]
-    dotenv: [terraform/.env]
+    desc: terraform fmt and validate, ansible syntax check
     cmds:
       - terraform -chdir=terraform fmt -recursive -check
-      - terraform -chdir=terraform validate
+      - task: tf
+        vars: { CMD: validate }
       - task: ansible
-        vars:
-          CLI_ARGS: --syntax-check playbooks/site.yml
+        vars: { CLI_ARGS: --syntax-check playbooks/site.yml }
+
+  tf:
+    internal: true
+    silent: true
+    dir: terraform
+    vars:
+      SECRETS: "{{.TASKFILE_DIR}}/ansible/inventory/group_vars/garage_servers.sops.yml"
+    env:
+      AWS_DEFAULT_REGION: garage
+      AWS_EC2_METADATA_DISABLED: "true"
+    cmds:
+      - |
+        export AWS_ACCESS_KEY_ID="$(sops -d --extract '["garage_s3_access_key"]' {{.SECRETS}})"
+        export AWS_SECRET_ACCESS_KEY="$(sops -d --extract '["garage_s3_secret_key"]' {{.SECRETS}})"
+        export TF_VAR_proxmox_api_token="$(sops -d --extract '["proxmox_api_token"]' secrets.sops.yaml)"
+        terraform {{.CMD}} {{.CLI_ARGS}}
