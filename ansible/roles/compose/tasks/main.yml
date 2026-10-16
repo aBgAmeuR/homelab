@@ -26,6 +26,14 @@
     label: "{{ item.key }}"
   when: compose_data_dir | length > 0
 
+- name: Fingerprint the compose project before the sync
+  ansible.builtin.command:
+    cmd: find . -type f -exec sha256sum {} +
+    chdir: "{{ compose_project_dest }}"
+  register: compose_files_before
+  changed_when: false
+  check_mode: false
+
 - name: Sync the compose project from the repo
   ansible.builtin.copy:
     src: "{{ compose_project_src }}/"
@@ -54,6 +62,39 @@
     label: "{{ item.dest }}"
   notify: Reconcile compose stack
 
+- name: Fingerprint the compose project after the sync
+  ansible.builtin.command:
+    cmd: find . -type f -exec sha256sum {} +
+    chdir: "{{ compose_project_dest }}"
+  register: compose_files_after
+  changed_when: false
+  check_mode: false
+
+- name: Read the bind mounts of each service
+  ansible.builtin.command:
+    cmd: docker compose config --format json
+    chdir: "{{ compose_project_dest }}"
+  register: compose_config
+  changed_when: false
+  check_mode: false
+
+- name: Find services that mount a changed file
+  ansible.builtin.set_fact:
+    compose_restart_services: >-
+      {%- set changed = compose_files_after.stdout_lines
+            | difference(compose_files_before.stdout_lines)
+            | map('regex_replace', '^\\S+\\s+\\./', compose_project_dest ~ '/')
+            | list -%}
+      {%- set services = [] -%}
+      {%- for name, service in (compose_config.stdout | from_json).services.items() -%}
+      {%- for volume in service.volumes | default([]) if volume.type == 'bind' -%}
+      {%- for path in changed if path == volume.source or path.startswith(volume.source ~ '/') -%}
+      {%- if name not in services -%}{%- set _ = services.append(name) -%}{%- endif -%}
+      {%- endfor -%}
+      {%- endfor -%}
+      {%- endfor -%}
+      {{ services | sort }}
+
 - name: Start the compose project
   ansible.builtin.command:
     cmd: docker compose up --detach --remove-orphans
@@ -66,6 +107,13 @@
 
 - name: Apply pending compose reconciles
   ansible.builtin.meta: flush_handlers
+
+- name: Restart services whose mounted files changed
+  ansible.builtin.command:
+    cmd: docker compose restart {{ compose_restart_services | join(' ') }}
+    chdir: "{{ compose_project_dest }}"
+  changed_when: true
+  when: compose_restart_services | length > 0
 
 - name: Wait until the compose health endpoint answers
   ansible.builtin.uri:
