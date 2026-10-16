@@ -21,12 +21,14 @@ containers = {
     vmid        = 113, hostname = "caddy", ip_address = "192.168.1.113/24", gateway = "192.168.1.1"
     cores       = 1, memory = 256, swap = 128, disk_size = 4
     template    = "local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst"
+    nesting     = true
     description = "Caddy reverse proxy (Managed by Terraform)"
   }
   auth = {
     vmid        = 114, hostname = "auth", ip_address = "192.168.1.114/24", gateway = "192.168.1.1"
     cores       = 1, memory = 512, swap = 256, disk_size = 8
     template    = "local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst"
+    nesting     = true
     description = "TinyAuth + lldap (Managed by Terraform)"
   }
   docker = {
