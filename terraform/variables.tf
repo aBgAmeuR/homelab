@@ -43,7 +43,7 @@ variable "containers" {
 variable "dns_servers" {
   description = "Resolvers given to every container that does not set its own dns_servers"
   type        = list(string)
-  default     = ["192.168.1.41"]
+  default     = ["192.168.1.116", "1.1.1.1"]
 }
 
 variable "firewall_extra_rules" {
