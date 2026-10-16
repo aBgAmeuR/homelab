@@ -1,7 +1,7 @@
 ---
 # Same version as the collector on CT 111 (docker/monitoring/compose.yaml).
 # renovate: datasource=github-releases depName=open-telemetry/opentelemetry-collector-releases extractVersion=^v(?<version>.+)$
-otelcol_version: "0.160.0"
+otelcol_version: "0.163.1"
 otelcol_download_url: "https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v{{ otelcol_version }}/otelcol-contrib_{{ otelcol_version }}_linux_amd64.deb"
 otelcol_checksum: "sha256:44c03585187c19476f1d2fe65cbdc1c80a3f6d5bc9dadf457bec9e677c655934"
 otelcol_cache: "/var/cache/otelcol/otelcol-contrib_{{ otelcol_version }}_linux_amd64.deb"
