@@ -1,0 +1,11 @@
+---
+- name: DNS and DHCP
+  hosts: dns_servers
+  become: true
+  gather_facts: true
+  tags: [dns]
+  roles:
+    - baseline
+    - dnsmasq
+    - blocky
+    - otelcol

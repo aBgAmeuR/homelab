@@ -42,7 +42,7 @@ resource "proxmox_virtual_environment_container" "this" {
 
     dns {
       domain  = "antoinejosset.fr"
-      servers = ["192.168.1.41"]
+      servers = each.value.dns_servers != null ? each.value.dns_servers : var.dns_servers
     }
 
     ip_config {

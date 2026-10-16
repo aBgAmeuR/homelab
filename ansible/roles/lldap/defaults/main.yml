@@ -1,4 +1,5 @@
 ---
+# renovate: datasource=github-releases depName=lldap/lldap
 lldap_version: "v0.6.3"
 lldap_download_url: "https://github.com/lldap/lldap/releases/download/{{ lldap_version }}/amd64-lldap.tar.gz"
 lldap_checksum: "sha256:e80b50ef39be61de9f1d75182b1e1fa5d82c672261c7e34fd8ffec5455ed3883"

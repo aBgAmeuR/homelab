@@ -12,6 +12,7 @@ module "lxc" {
 
   node_name       = var.node_name
   containers      = var.containers
+  dns_servers     = var.dns_servers
   ssh_public_keys = local.ssh_public_keys
 }
 

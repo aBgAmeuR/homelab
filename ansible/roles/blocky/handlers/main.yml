@@ -1,0 +1,6 @@
+---
+- name: Restart blocky
+  ansible.builtin.systemd:
+    name: blocky
+    state: restarted
+    daemon_reload: true

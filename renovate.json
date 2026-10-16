@@ -3,5 +3,31 @@
   "extends": [
     "config:recommended",
     ":dependencyDashboard"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Release binaries pinned in Ansible role defaults",
+      "managerFilePatterns": ["/^ansible/roles/[^/]+/defaults/main\\.yml$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)(?: extractVersion=(?<extractVersion>\\S+))?\\n[a-z_]+_version: \"?(?<currentValue>[^\"\\n]+)\"?"
+      ]
+    }
+  ],
+  "packageRules": [
+    {
+      "matchManagers": ["custom.regex"],
+      "prBodyNotes": [
+        "Update the matching `*_checksum` in the same file before merging: `get_url` refuses the new release until the sha256 matches."
+      ]
+    },
+    {
+      "description": "Keep the collector on CT 116 and the one on CT 111 at the same version",
+      "matchPackageNames": [
+        "open-telemetry/opentelemetry-collector-releases",
+        "otel/opentelemetry-collector-contrib"
+      ],
+      "groupName": "OpenTelemetry Collector"
+    }
   ]
 }

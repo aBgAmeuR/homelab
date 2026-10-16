@@ -1,0 +1,18 @@
+# Managed by Ansible.
+# DNS: loopback only, no upstream. It answers for the names of its own DHCP leases.
+port={{ dnsmasq_dns_port }}
+bind-interfaces
+listen-address=127.0.0.1
+no-resolv
+no-hosts
+domain={{ dnsmasq_domain }}
+local=/{{ dnsmasq_domain }}/
+{% if dnsmasq_dhcp_enabled %}
+
+# DHCP. The guest firewall drops the DNS port on this interface.
+interface={{ dnsmasq_interface }}
+dhcp-authoritative
+dhcp-range={{ dnsmasq_dhcp_range_start }},{{ dnsmasq_dhcp_range_end }},{{ dnsmasq_dhcp_lease_time }}
+dhcp-option=option:router,{{ dnsmasq_dhcp_router }}
+dhcp-option=option:dns-server,{{ dnsmasq_dhcp_dns_servers | join(',') }}
+{% endif %}

@@ -77,6 +77,7 @@ docs/                      documentation
 | [Bootstrap](docs/bootstrap.md) | Manual steps before the first apply |
 | [Operations](docs/operations.md) | Commands and secrets |
 | [Auth](docs/auth.md) | lldap, TinyAuth, Proxmox OpenID realm |
+| [DNS and DHCP](docs/dns.md) | Blocky, dnsmasq, local records |
 | [Observability](docs/observability.md) | Signals, dashboards, Harmony telemetry |
 | [Harmony](docs/harmony.md) | App, Cloudflare tunnel, image updates |
 | [AFFiNE](docs/affine.md) | App, OIDC login, deploy order |

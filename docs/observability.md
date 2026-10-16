@@ -11,6 +11,7 @@ The guest firewall allows Grafana `:3000` from Caddy (`192.168.1.113`) only. The
 | Host metrics | node-exporter on CT 111 and CT 115 |
 | Container metrics | cAdvisor on CT 111 and CT 115 |
 | Proxmox metrics | pve-exporter reading the API on 192.168.1.110 |
+| DNS | Blocky metrics on `192.168.1.116:4000`. Blocky's JSON log, query log included, goes from journald to an otelcol on CT 116, then OTLP to the collector, then Loki (`service_name="blocky"`) |
 | Stack health | Loki, Tempo, Pyroscope and the collector scrape themselves |
 | Harmony | OTLP from CT 115 to the collector on `:4318`. Traces in Tempo, logs in Loki, RED metrics from server spans |
 
@@ -22,4 +23,4 @@ The Grafana dashboard **Harmony** reads those metrics and logs. From a trace, Gr
 
 ## Dashboards
 
-Provisioned from `docker/monitoring/grafana/dashboards/`: Docker cAdvisor, Harmony, Node Exporter Full, Proxmox VE.
+Provisioned from `docker/monitoring/grafana/dashboards/`: Blocky, Docker cAdvisor, Harmony, Node Exporter Full, Proxmox VE.

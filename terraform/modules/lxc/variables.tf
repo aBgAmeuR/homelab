@@ -19,7 +19,13 @@ variable "containers" {
     nesting       = optional(bool, false)
     swap          = optional(number)
     description   = optional(string, "Managed by Terraform")
+    dns_servers   = optional(list(string))
   }))
+}
+
+variable "dns_servers" {
+  description = "Resolvers for containers that do not set their own dns_servers"
+  type        = list(string)
 }
 
 variable "ssh_public_keys" {

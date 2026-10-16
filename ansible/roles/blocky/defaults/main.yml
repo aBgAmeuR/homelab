@@ -1,0 +1,24 @@
+---
+# renovate: datasource=github-releases depName=0xERR0R/blocky
+blocky_version: "v0.35.0"
+blocky_download_url: "https://github.com/0xERR0R/blocky/releases/download/{{ blocky_version }}/blocky_{{ blocky_version }}_Linux_x86_64.tar.gz"
+blocky_checksum: "sha256:97ae4257e4f2ea7ee4e0622fca152019eb92224d81b41b2549f064e4cef5584e"
+blocky_install_dir: "/opt/blocky/{{ blocky_version }}"
+blocky_cache: "/var/cache/blocky-release/blocky_{{ blocky_version }}.tar.gz"
+blocky_binary: /usr/local/bin/blocky
+blocky_config: /etc/blocky/config.yml
+blocky_lists_cache: /var/cache/blocky/lists
+blocky_user: blocky
+blocky_http_port: 4000
+
+blocky_upstreams:
+  - 1.1.1.1
+  - 1.0.0.1
+blocky_denylists: []
+# Domains to unblock, one per entry.
+blocky_allowlist: []
+# Local records as name/ip pairs. A name also covers all its subdomains.
+blocky_custom_dns: []
+# Domain served by dnsmasq for DHCP client names, and where to ask for it.
+blocky_local_domain: "{{ dnsmasq_domain | default('lan') }}"
+blocky_local_resolver: "127.0.0.1:{{ dnsmasq_dns_port | default(5353) }}"

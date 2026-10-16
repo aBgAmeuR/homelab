@@ -1,0 +1,108 @@
+---
+- name: Require a denylist
+  ansible.builtin.assert:
+    that:
+      - blocky_denylists | length > 0
+    fail_msg: Set blocky_denylists in inventory/group_vars/dns_servers.yml.
+
+- name: Create the blocky system user
+  ansible.builtin.user:
+    name: "{{ blocky_user }}"
+    system: true
+    home: /nonexistent
+    shell: /usr/sbin/nologin
+    create_home: false
+
+- name: Create blocky directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - path: "{{ blocky_cache | dirname }}"
+      owner: root
+      group: root
+      mode: "0750"
+    - path: "{{ blocky_install_dir }}"
+      owner: root
+      group: root
+      mode: "0755"
+    - path: "{{ blocky_config | dirname }}"
+      owner: root
+      group: "{{ blocky_user }}"
+      mode: "0750"
+    - path: "{{ blocky_lists_cache }}"
+      owner: "{{ blocky_user }}"
+      group: "{{ blocky_user }}"
+      mode: "0750"
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: Download pinned blocky release
+  ansible.builtin.get_url:
+    url: "{{ blocky_download_url }}"
+    dest: "{{ blocky_cache }}"
+    checksum: "{{ blocky_checksum }}"
+    mode: "0640"
+    owner: root
+    group: root
+
+- name: Extract blocky
+  ansible.builtin.unarchive:
+    src: "{{ blocky_cache }}"
+    dest: "{{ blocky_install_dir }}"
+    remote_src: true
+    creates: "{{ blocky_install_dir }}/blocky"
+    owner: root
+    group: root
+
+- name: Install the blocky binary
+  ansible.builtin.copy:
+    src: "{{ blocky_install_dir }}/blocky"
+    dest: "{{ blocky_binary }}"
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0755"
+  notify: Restart blocky
+
+- name: Install the blocky configuration
+  ansible.builtin.template:
+    src: config.yml.j2
+    dest: "{{ blocky_config }}"
+    owner: root
+    group: "{{ blocky_user }}"
+    mode: "0640"
+    validate: "{{ blocky_binary }} validate --config %s"
+  notify: Restart blocky
+
+- name: Install the blocky systemd unit
+  ansible.builtin.template:
+    src: blocky.service.j2
+    dest: /etc/systemd/system/blocky.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart blocky
+
+- name: Enable and start blocky
+  ansible.builtin.systemd:
+    name: blocky
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Apply pending blocky restarts
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait until blocky listens
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: "{{ item }}"
+    delay: 1
+    timeout: 60
+  loop:
+    - 53
+    - "{{ blocky_http_port }}"

@@ -1,0 +1,52 @@
+---
+- name: Require DNS servers to announce over DHCP
+  ansible.builtin.assert:
+    that:
+      - not dnsmasq_dhcp_enabled or dnsmasq_dhcp_dns_servers | length > 0
+    fail_msg: Set dnsmasq_dhcp_dns_servers in inventory/group_vars/dns_servers.yml.
+
+- name: Create the dnsmasq configuration directory
+  ansible.builtin.file:
+    path: "{{ dnsmasq_config | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+# Written before the package so that its first start does not take port 53 from Blocky.
+- name: Install the dnsmasq configuration
+  ansible.builtin.template:
+    src: lab.conf.j2
+    dest: "{{ dnsmasq_config }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart dnsmasq
+
+- name: Install dnsmasq
+  ansible.builtin.apt:
+    name: dnsmasq
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Check the dnsmasq configuration
+  ansible.builtin.command:
+    cmd: dnsmasq --test --conf-file=/etc/dnsmasq.conf --conf-dir=/etc/dnsmasq.d,.dpkg-dist,.dpkg-old,.dpkg-new
+  changed_when: false
+
+- name: Enable and start dnsmasq
+  ansible.builtin.systemd:
+    name: dnsmasq
+    enabled: true
+    state: started
+
+- name: Apply pending dnsmasq restarts
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait until dnsmasq listens on loopback
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: "{{ dnsmasq_dns_port }}"
+    delay: 1
+    timeout: 30

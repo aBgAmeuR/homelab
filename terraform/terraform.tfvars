@@ -36,6 +36,14 @@ containers = {
     nesting     = true
     description = "Docker host (Managed by Terraform)"
   }
+  dns = {
+    vmid        = 116, hostname = "dns", ip_address = "192.168.1.116/24", gateway = "192.168.1.1"
+    cores       = 1, memory = 512, swap = 256, disk_size = 8
+    template    = "local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst"
+    nesting     = true
+    dns_servers = ["127.0.0.1", "1.1.1.1"]
+    description = "Blocky + dnsmasq (Managed by Terraform)"
+  }
 }
 
 firewall_extra_rules = {
@@ -128,6 +136,38 @@ firewall_extra_rules = {
       dport   = "8080"
       source  = "192.168.1.111"
       comment = "cAdvisor from Prometheus"
+    },
+  ]
+
+  dns = [
+    {
+      type    = "in"
+      action  = "ACCEPT"
+      proto   = "udp"
+      dport   = "53"
+      source  = "192.168.1.0/24"
+      comment = "DNS (UDP) from the LAN"
+    },
+    {
+      type    = "in"
+      action  = "ACCEPT"
+      dport   = "53"
+      source  = "192.168.1.0/24"
+      comment = "DNS (TCP) from the LAN"
+    },
+    {
+      type    = "in"
+      action  = "ACCEPT"
+      proto   = "udp"
+      dport   = "67"
+      comment = "DHCP requests (broadcast from 0.0.0.0)"
+    },
+    {
+      type    = "in"
+      action  = "ACCEPT"
+      dport   = "4000"
+      source  = "192.168.1.111"
+      comment = "Blocky metrics from Prometheus"
     },
   ]
 }

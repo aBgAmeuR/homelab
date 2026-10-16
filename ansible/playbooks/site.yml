@@ -2,6 +2,9 @@
 - name: Baseline OS on every guest
   ansible.builtin.import_playbook: baseline.yml
 
+- name: DNS and DHCP
+  ansible.builtin.import_playbook: dns.yml
+
 - name: Docker Engine
   ansible.builtin.import_playbook: docker.yml
 

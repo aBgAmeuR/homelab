@@ -1,0 +1,84 @@
+# Managed by Ansible.
+upstreams:
+  init:
+    strategy: fast
+  groups:
+    default:
+{% for upstream in blocky_upstreams %}
+      - {{ upstream }}
+{% endfor %}
+  strategy: parallel_best
+
+# Downloads the lists without going through this resolver, which may not be up yet.
+bootstrapDns:
+{% for upstream in blocky_upstreams %}
+  - tcp+udp:{{ upstream }}
+{% endfor %}
+
+connectIPVersion: v4
+
+customDNS:
+  customTTL: 1h
+  filterUnmappedTypes: true
+  mapping:
+{% for record in blocky_custom_dns %}
+    {{ record.name }}: {{ record.ip }}
+{% endfor %}
+
+# Client names from DHCP (for example pc-antoine.lan), answered by dnsmasq.
+conditional:
+  mapping:
+    {{ blocky_local_domain }}: {{ blocky_local_resolver }}
+
+# .lan is on the RFC 6762 list of private TLDs that Blocky would otherwise answer itself.
+specialUseDomains:
+  rfc6762-appendixG: false
+
+blocking:
+  denylists:
+    ads:
+{% for list in blocky_denylists %}
+      - {{ list }}
+{% endfor %}
+{% if blocky_allowlist | length > 0 %}
+  allowlists:
+    ads:
+      - |
+{% for domain in blocky_allowlist %}
+        {{ domain }}
+{% endfor %}
+{% endif %}
+  clientGroupsBlock:
+    default:
+      - ads
+  blockType: zeroIp
+  blockTTL: 1m
+  loading:
+    refreshPeriod: 4h
+    strategy: fast
+    downloads:
+      timeout: 60s
+      # Serves the last good copy when GitHub is unreachable at boot.
+      cachePath: {{ blocky_lists_cache }}
+
+caching:
+  prefetching: true
+
+clientLookup:
+  upstream: {{ blocky_local_resolver }}
+  singleNameOrder:
+    - 1
+
+prometheus:
+  enable: true
+
+queryLog:
+  type: console
+
+ports:
+  dns: 53
+  http: {{ blocky_http_port }}
+
+log:
+  level: info
+  format: json

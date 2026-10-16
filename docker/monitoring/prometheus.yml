@@ -25,6 +25,12 @@ scrape_configs:
       - files:
           - /etc/prometheus/targets/cadvisor.yml
 
+  - job_name: blocky
+    static_configs:
+      - targets: ["192.168.1.116:4000"]
+        labels:
+          instance: dns
+
   - job_name: pve
     metrics_path: /pve
     params:

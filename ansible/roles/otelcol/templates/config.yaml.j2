@@ -1,0 +1,66 @@
+# Managed by Ansible.
+extensions:
+  # Journal cursors survive a restart: no gap, no duplicates.
+  file_storage:
+    directory: {{ otelcol_storage_dir }}
+
+receivers:
+{% for source in otelcol_journald_units %}
+  journald/{{ source.service_name }}:
+    directory: /var/log/journal
+    units:
+      - {{ source.unit }}
+    priority: info
+    start_at: end
+    storage: file_storage
+    operators:
+      - type: move
+        from: body.MESSAGE
+        to: body
+      - type: add
+        field: resource["service.name"]
+        value: {{ source.service_name }}
+{% if source.json | default(false) %}
+      # systemd's own lines about the unit are not JSON and pass through as text.
+      - type: json_parser
+        parse_from: body
+        parse_to: attributes
+        on_error: send_quiet
+        timestamp:
+          parse_from: attributes.time
+          layout_type: gotime
+          layout: "2006-01-02T15:04:05Z07:00"
+        severity:
+          parse_from: attributes.level
+{% endif %}
+{% endfor %}
+
+processors:
+  memory_limiter:
+    check_interval: 5s
+    limit_mib: {{ otelcol_memory_limit_mib }}
+    spike_limit_mib: {{ (otelcol_memory_limit_mib / 4) | int }}
+  resource:
+    attributes:
+      - key: host.name
+        value: {{ inventory_hostname }}
+        action: upsert
+  batch: {}
+
+exporters:
+  otlp_http:
+    endpoint: {{ otelcol_otlp_endpoint }}
+
+service:
+  extensions: [file_storage]
+  telemetry:
+    metrics:
+      level: none
+  pipelines:
+    logs:
+      receivers:
+{% for source in otelcol_journald_units %}
+        - journald/{{ source.service_name }}
+{% endfor %}
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlp_http]
