@@ -32,7 +32,7 @@ scrape_configs:
       cluster: ["1"]
       node: ["1"]
     static_configs:
-      - targets: ["192.168.1.40"]
+      - targets: ["192.168.1.110"]
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target

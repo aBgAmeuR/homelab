@@ -68,7 +68,7 @@ firewall_extra_rules = {
       type    = "in"
       action  = "ACCEPT"
       dport   = "3900"
-      source  = "192.168.1.74"
+      source  = "192.168.1.117"
       comment = "Garage S3 from remote-dev"
     },
   ]

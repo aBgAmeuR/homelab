@@ -10,7 +10,7 @@ The guest firewall allows Grafana `:3000` from Caddy (`192.168.1.113`) only. The
 | --- | --- |
 | Host metrics | node-exporter on CT 111 and CT 115 |
 | Container metrics | cAdvisor on CT 111 and CT 115 |
-| Proxmox metrics | pve-exporter reading the API on 192.168.1.40 |
+| Proxmox metrics | pve-exporter reading the API on 192.168.1.110 |
 | Stack health | Loki, Tempo, Pyroscope and the collector scrape themselves |
 | Harmony | OTLP from CT 115 to the collector on `:4318`. Traces in Tempo, logs in Loki, RED metrics from server spans |
 
