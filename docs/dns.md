@@ -51,7 +51,7 @@ The configuration is checked with `blocky validate` before it is installed.
 
 ## DHCP
 
-`dnsmasq_dhcp_enabled` stays `false` while Pi-hole serves DHCP. Range `192.168.1.20`-`192.168.1.100`, 12 h leases, no reservations: fixed hosts use static addresses outside the range.
+`dnsmasq_dhcp_enabled: true`. Pi-hole's DHCP is off. Range `192.168.1.20`-`192.168.1.100`, 12 h leases, no reservations: fixed hosts use static addresses. `192.168.1.37` (postgres) and `192.168.1.100` (nas, nginx) sit inside the range; dnsmasq pings an address before offering it, so a live static host is skipped.
 
 ## Check
 

@@ -34,8 +34,7 @@ blocky_custom_dns:
   - { name: "proxmox.{{ lab_domain }}", ip: 192.168.1.100 }
   - { name: "wireguard.{{ lab_domain }}", ip: 192.168.1.100 }
 
-# Off until the cutover (step 5), while Pi-hole still serves DHCP.
-dnsmasq_dhcp_enabled: false
+dnsmasq_dhcp_enabled: true
 dnsmasq_dhcp_dns_servers:
   - 192.168.1.116
   - 1.1.1.1
