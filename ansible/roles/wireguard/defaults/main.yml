@@ -1,0 +1,19 @@
+---
+wireguard_interface: wg0
+wireguard_port: 16082
+# Server address in the tunnel, and the tunnel network it belongs to.
+wireguard_address: 10.0.0.1/24
+wireguard_network: 10.0.0.0/24
+# Tunnel traffic leaves through this interface, masqueraded to the guest's LAN address.
+wireguard_wan_interface: eth0
+
+# Set in inventory/group_vars/vpn_servers.sops.yml.
+# wireguard_private_key:
+
+# One entry per client: { name, address, public_key }. address is the
+# client's tunnel IP, without prefix.
+wireguard_peers: []
+
+# Peer metrics for node-exporter's textfile collector.
+wireguard_metrics_dir: "{{ node_exporter_textfile_dir | default('/var/lib/prometheus/node-exporter') }}"
+wireguard_metrics_interval: 15s

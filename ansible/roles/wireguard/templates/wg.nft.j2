@@ -1,0 +1,12 @@
+# Managed by Ansible. Loaded by wg-quick PostUp, removed by PostDown.
+# The first two lines make a reload replace the table instead of failing.
+table ip {{ wireguard_interface }}
+delete table ip {{ wireguard_interface }}
+
+table ip {{ wireguard_interface }} {
+  chain postrouting {
+    type nat hook postrouting priority srcnat; policy accept;
+    # The box has no route to the tunnel network.
+    ip saddr {{ wireguard_network }} oifname "{{ wireguard_wan_interface }}" masquerade
+  }
+}

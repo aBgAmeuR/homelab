@@ -17,7 +17,9 @@ flowchart LR
         mon[111 Grafana, Prometheus,<br/>Loki, Tempo, Pyroscope, OTel]
         dock[115 Docker host<br/>Harmony, AFFiNE, File Browser]
         garage[(112 Garage<br/>S3, Terraform state)]
+        vpn[118 WireGuard]
     end
+    client([VPN client]) --> vpn
     caddy --> auth
     caddy --> mon
     caddy --> dock
@@ -31,7 +33,7 @@ flowchart LR
 | Provisioning | Terraform (`bpg/proxmox`), state in Garage |
 | Configuration | Ansible |
 | Secrets | SOPS + age |
-| Edge | Caddy, TinyAuth (OIDC + forward-auth), lldap |
+| Edge | Caddy, TinyAuth (OIDC + forward-auth), lldap, WireGuard |
 | Observability | Grafana, Prometheus, Loki, Tempo, Pyroscope, OpenTelemetry Collector |
 | Workloads | Docker Compose, Renovate |
 
@@ -78,6 +80,7 @@ docs/                      documentation
 | [Operations](docs/operations.md) | Commands and secrets |
 | [Auth](docs/auth.md) | lldap, TinyAuth, Proxmox OpenID realm |
 | [DNS and DHCP](docs/dns.md) | Blocky, dnsmasq, local records |
+| [VPN](docs/vpn.md) | WireGuard, peers |
 | [Observability](docs/observability.md) | Signals, dashboards, Harmony telemetry |
 | [Harmony](docs/harmony.md) | App, Cloudflare tunnel, image updates |
 | [AFFiNE](docs/affine.md) | App, OIDC login, deploy order |

@@ -1,0 +1,118 @@
+---
+- name: Require the server key
+  ansible.builtin.assert:
+    that:
+      - wireguard_private_key is defined
+      - wireguard_private_key | length == 44
+    fail_msg: Set wireguard_private_key in inventory/group_vars/vpn_servers.sops.yml.
+    quiet: true
+
+- name: Check the peers
+  ansible.builtin.assert:
+    that:
+      - item.name is match('^[a-z0-9-]+$')
+      - item.public_key | length == 44
+      - item.address is match('^[0-9.]+$')
+      - wireguard_peers | selectattr('address', 'equalto', item.address) | list | length == 1
+      - wireguard_peers | selectattr('name', 'equalto', item.name) | list | length == 1
+    fail_msg: "Peer {{ item.name }}: lowercase name, 44-character public key, unique name and address."
+    quiet: true
+  loop: "{{ wireguard_peers }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Install WireGuard and nftables
+  ansible.builtin.apt:
+    name:
+      - wireguard-tools
+      - nftables
+    state: present
+    install_recommends: false
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Enable IPv4 forwarding
+  ansible.builtin.template:
+    src: sysctl.conf.j2
+    dest: /etc/sysctl.d/90-wireguard.conf
+    owner: root
+    group: root
+    mode: "0644"
+  register: wireguard_sysctl
+
+- name: Apply IPv4 forwarding
+  ansible.builtin.command:
+    cmd: sysctl -p /etc/sysctl.d/90-wireguard.conf
+  when: wireguard_sysctl is changed
+  changed_when: true
+
+- name: Install the NAT rules
+  ansible.builtin.template:
+    src: wg.nft.j2
+    dest: "/etc/wireguard/{{ wireguard_interface }}.nft"
+    owner: root
+    group: root
+    mode: "0644"
+    validate: nft -c -f %s
+  notify: Restart wireguard
+
+- name: Install the WireGuard configuration
+  ansible.builtin.template:
+    src: wg.conf.j2
+    dest: "/etc/wireguard/{{ wireguard_interface }}.conf"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: Reload wireguard
+
+- name: Enable and start WireGuard
+  ansible.builtin.systemd:
+    name: "wg-quick@{{ wireguard_interface }}"
+    enabled: true
+    state: started
+
+- name: Install the peer names for metrics
+  ansible.builtin.template:
+    src: peer-names.j2
+    dest: /etc/wireguard/peer-names
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Install the metrics script
+  ansible.builtin.copy:
+    src: wireguard-metrics
+    dest: /usr/local/bin/wireguard-metrics
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install the metrics units
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - wireguard-metrics.service
+    - wireguard-metrics.timer
+  notify: Restart wireguard metrics timer
+
+- name: Enable and start the metrics timer
+  ansible.builtin.systemd:
+    name: wireguard-metrics.timer
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Apply pending WireGuard restarts
+  ansible.builtin.meta: flush_handlers
+
+- name: Check that the interface is up
+  ansible.builtin.command:
+    cmd: "wg show {{ wireguard_interface }} listen-port"
+  register: wireguard_listen_port
+  changed_when: false
+  failed_when: wireguard_listen_port.stdout | trim != wireguard_port | string

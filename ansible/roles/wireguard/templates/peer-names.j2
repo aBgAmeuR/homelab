@@ -1,0 +1,4 @@
+# Managed by Ansible. Public key, then peer name, for wireguard-metrics.
+{% for peer in wireguard_peers %}
+{{ peer.public_key }} {{ peer.name }}
+{% endfor %}

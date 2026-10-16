@@ -13,6 +13,7 @@ sops ansible/inventory/group_vars/garage_servers.sops.yml
 sops ansible/inventory/group_vars/observability.sops.yml
 sops ansible/inventory/group_vars/reverse_proxies.sops.yml
 sops ansible/inventory/group_vars/identity_servers.sops.yml
+sops ansible/inventory/group_vars/vpn_servers.sops.yml
 sops ansible/inventory/host_vars/docker.sops.yml
 ```
 

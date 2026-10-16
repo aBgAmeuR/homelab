@@ -1,0 +1,43 @@
+#!/bin/bash
+# Writes `wg show all dump` as Prometheus metrics for node-exporter's textfile
+# collector. Usage: wireguard-metrics PEER_NAMES_FILE OUTPUT_FILE
+set -euo pipefail
+
+names="$1"
+out="$2"
+tmp="$(mktemp "${out}.XXXXXX")"
+trap 'rm -f "$tmp"' EXIT
+
+wg show all dump | awk -v names="$names" '
+BEGIN {
+  while ((getline line < names) > 0) {
+    if (line ~ /^#/ || split(line, f, " ") < 2) continue
+    name[f[1]] = f[2]
+  }
+}
+# Interface lines have 5 fields, peer lines 9.
+NF != 9 { next }
+{
+  peer = ($2 in name) ? name[$2] : "unknown"
+  labels = sprintf("interface=\"%s\",peer=\"%s\",allowed_ips=\"%s\"", $1, peer, $5)
+  n++
+  handshake[n] = labels " " $6
+  rx[n] = labels " " $7
+  tx[n] = labels " " $8
+}
+END {
+  print "# HELP wireguard_peer_last_handshake_seconds Unix time of the last handshake, 0 if none."
+  print "# TYPE wireguard_peer_last_handshake_seconds gauge"
+  for (i = 1; i <= n; i++) { split(handshake[i], v, " "); print "wireguard_peer_last_handshake_seconds{" v[1] "} " v[2] }
+  print "# HELP wireguard_peer_receive_bytes_total Bytes received from the peer."
+  print "# TYPE wireguard_peer_receive_bytes_total counter"
+  for (i = 1; i <= n; i++) { split(rx[i], v, " "); print "wireguard_peer_receive_bytes_total{" v[1] "} " v[2] }
+  print "# HELP wireguard_peer_transmit_bytes_total Bytes sent to the peer."
+  print "# TYPE wireguard_peer_transmit_bytes_total counter"
+  for (i = 1; i <= n; i++) { split(tx[i], v, " "); print "wireguard_peer_transmit_bytes_total{" v[1] "} " v[2] }
+}' > "$tmp"
+
+# mktemp creates 0600; node-exporter runs as prometheus.
+chmod 0644 "$tmp"
+mv "$tmp" "$out"
+trap - EXIT

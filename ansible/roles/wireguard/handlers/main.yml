@@ -1,0 +1,17 @@
+---
+# Peer changes apply with `wg syncconf`: connected peers keep their session.
+- name: Reload wireguard
+  ansible.builtin.systemd:
+    name: "wg-quick@{{ wireguard_interface }}"
+    state: reloaded
+
+- name: Restart wireguard
+  ansible.builtin.systemd:
+    name: "wg-quick@{{ wireguard_interface }}"
+    state: restarted
+
+- name: Restart wireguard metrics timer
+  ansible.builtin.systemd:
+    name: wireguard-metrics.timer
+    state: restarted
+    daemon_reload: true

@@ -1,0 +1,43 @@
+---
+# Without recommends: prometheus-node-exporter-collectors adds apt, smartmon
+# and other timers that have nothing to read in an LXC.
+- name: Install node-exporter
+  ansible.builtin.apt:
+    name: prometheus-node-exporter
+    state: present
+    install_recommends: false
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Configure node-exporter
+  ansible.builtin.template:
+    src: prometheus-node-exporter.j2
+    dest: /etc/default/prometheus-node-exporter
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart node-exporter
+
+- name: Create the textfile collector directory
+  ansible.builtin.file:
+    path: "{{ node_exporter_textfile_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Enable and start node-exporter
+  ansible.builtin.systemd:
+    name: prometheus-node-exporter
+    enabled: true
+    state: started
+
+- name: Apply pending node-exporter restarts
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait until node-exporter listens
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: "{{ node_exporter_port }}"
+    delay: 1
+    timeout: 30

@@ -32,7 +32,6 @@ blocky_custom_dns:
   - { name: "nginx.{{ lab_domain }}", ip: 192.168.1.100 }
   - { name: "pdf.{{ lab_domain }}", ip: 192.168.1.100 }
   - { name: "proxmox.{{ lab_domain }}", ip: 192.168.1.100 }
-  - { name: "wireguard.{{ lab_domain }}", ip: 192.168.1.100 }
 
 dnsmasq_dhcp_enabled: true
 dnsmasq_dhcp_dns_servers:

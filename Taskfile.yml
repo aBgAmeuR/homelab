@@ -34,6 +34,11 @@ tasks:
     cmds:
       - ansible-playbook {{.CLI_ARGS}}
 
+  wg:peer:
+    desc: new WireGuard client (name and tunnel address after --, WG_ENDPOINT=host:port)
+    cmds:
+      - scripts/wg-peer.sh {{.CLI_ARGS}}
+
   check:
     desc: terraform fmt and validate, ansible syntax check
     cmds:

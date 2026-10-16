@@ -1,0 +1,5 @@
+---
+# Debian's package, for guests without Docker. Docker hosts run the container
+# from their Compose project instead.
+node_exporter_textfile_dir: /var/lib/prometheus/node-exporter
+node_exporter_port: 9100

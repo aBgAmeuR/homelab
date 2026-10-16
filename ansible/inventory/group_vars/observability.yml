@@ -33,6 +33,8 @@ monitoring_node_targets:
     instance: monitoring
   - address: 192.168.1.115:9100
     instance: docker
+  - address: 192.168.1.118:9100
+    instance: vpn
 monitoring_cadvisor_targets:
   - address: cadvisor:8080
     instance: monitoring

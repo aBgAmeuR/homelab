@@ -5,6 +5,9 @@
 - name: DNS and DHCP
   ansible.builtin.import_playbook: dns.yml
 
+- name: WireGuard
+  ansible.builtin.import_playbook: vpn.yml
+
 - name: Docker Engine
   ansible.builtin.import_playbook: docker.yml
 

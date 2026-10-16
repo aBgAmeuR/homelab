@@ -1,0 +1,7 @@
+[Unit]
+Description=WireGuard peer metrics for node-exporter
+After=wg-quick@{{ wireguard_interface }}.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/wireguard-metrics /etc/wireguard/peer-names {{ wireguard_metrics_dir }}/wireguard.prom

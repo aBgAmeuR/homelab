@@ -1,0 +1,10 @@
+---
+- name: WireGuard
+  hosts: vpn_servers
+  become: true
+  gather_facts: true
+  tags: [vpn, wireguard]
+  roles:
+    - baseline
+    - node_exporter
+    - wireguard

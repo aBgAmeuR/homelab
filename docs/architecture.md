@@ -32,16 +32,18 @@ Neither tool touches the other's side, so a drifting guest never causes a contai
 | 114 | 192.168.1.114 | auth | lldap + TinyAuth |
 | 115 | 192.168.1.115 | docker | Compose host: Harmony, File Browser, AFFiNE, node-exporter, cAdvisor |
 | 116 | 192.168.1.116 | dns | Blocky + dnsmasq |
+| 118 | 192.168.1.118 | vpn | WireGuard |
 
 `192.168.1.110` is the Proxmox host and `192.168.1.117` is remote-dev, so VMID 117 is not used for a guest.
 
 ## Playbooks
 
-`ansible/playbooks/site.yml` imports the others in this order: baseline, dns, docker, garage, identity, observability, docker-host, edge. Each playbook can also run alone, usually with `--tags`.
+`ansible/playbooks/site.yml` imports the others in this order: baseline, dns, vpn, docker, garage, identity, observability, docker-host, edge. Each playbook can also run alone, usually with `--tags`.
 
 ## Service pages
 
 - [DNS and DHCP](dns.md)
+- [VPN](vpn.md)
 - [Observability](observability.md)
 - [Auth](auth.md)
 - [Harmony](harmony.md)

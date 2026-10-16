@@ -46,6 +46,13 @@ containers = {
     dns_servers = ["127.0.0.1", "1.1.1.1"]
     description = "Blocky + dnsmasq (Managed by Terraform)"
   }
+  vpn = {
+    vmid        = 118, hostname = "vpn", ip_address = "192.168.1.118/24", gateway = "192.168.1.1"
+    cores       = 1, memory = 256, swap = 128, disk_size = 4
+    template    = "local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst"
+    nesting     = true
+    description = "WireGuard (Managed by Terraform)"
+  }
 }
 
 firewall_extra_rules = {
@@ -170,6 +177,23 @@ firewall_extra_rules = {
       dport   = "4000"
       source  = "192.168.1.111"
       comment = "Blocky metrics from Prometheus"
+    },
+  ]
+
+  vpn = [
+    {
+      type    = "in"
+      action  = "ACCEPT"
+      proto   = "udp"
+      dport   = "16082"
+      comment = "WireGuard from the internet (box port forward)"
+    },
+    {
+      type    = "in"
+      action  = "ACCEPT"
+      dport   = "9100"
+      source  = "192.168.1.111"
+      comment = "node-exporter from Prometheus"
     },
   ]
 }

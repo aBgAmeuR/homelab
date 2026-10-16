@@ -1,0 +1,10 @@
+[Unit]
+Description=Write WireGuard peer metrics every {{ wireguard_metrics_interval }}
+
+[Timer]
+OnBootSec={{ wireguard_metrics_interval }}
+OnUnitActiveSec={{ wireguard_metrics_interval }}
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target
