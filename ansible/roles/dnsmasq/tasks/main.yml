@@ -23,6 +23,23 @@
     mode: "0644"
   notify: Restart dnsmasq
 
+- name: Create the dnsmasq systemd drop-in directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/dnsmasq.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install the dnsmasq systemd drop-in
+  ansible.builtin.copy:
+    src: override.conf
+    dest: /etc/systemd/system/dnsmasq.service.d/override.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart dnsmasq
+
 - name: Install dnsmasq
   ansible.builtin.apt:
     name: dnsmasq

@@ -1,7 +1,8 @@
 # Managed by Ansible.
 # DNS: loopback only, no upstream. It answers for the names of its own DHCP leases.
 port={{ dnsmasq_dns_port }}
-bind-interfaces
+# bind-dynamic tolerates eth0 coming up after dnsmasq; bind-interfaces exits at boot.
+bind-dynamic
 listen-address=127.0.0.1
 no-resolv
 no-hosts
