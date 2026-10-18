@@ -6,7 +6,9 @@ Groups `admin` and `user` are homelab-wide.
 
 ## Clients
 
-Grafana, File Browser, Proxmox, and AFFiNE are TinyAuth OIDC clients. The client pairs live in `inventory/group_vars/all.sops.yml`.
+Grafana, Proxmox, and AFFiNE are TinyAuth OIDC clients. The client pairs live in `inventory/group_vars/all.sops.yml`.
+
+Filestash is behind Caddy `forward_auth` instead (`forward_auth: true` in `caddy_sites`). Caddy asks TinyAuth `/api/auth/caddy` on `192.168.1.114:3000` before each request, except for the site's `health_path`. See [Filestash](filestash.md).
 
 Grafana uses Generic OAuth with TinyAuth as the OIDC issuer. The local Grafana `admin` password stays as break-glass.
 

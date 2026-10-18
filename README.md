@@ -15,7 +15,7 @@ flowchart LR
         caddy[113 Caddy<br/>reverse proxy, TLS]
         auth[114 lldap + TinyAuth<br/>OIDC, forward-auth]
         mon[111 Grafana, Prometheus,<br/>Loki, Tempo, Pyroscope, OTel]
-        dock[115 Docker host<br/>Harmony, AFFiNE, File Browser]
+        dock[115 Docker host<br/>Harmony, AFFiNE, Filestash]
         garage[(112 Garage<br/>S3, Terraform state)]
         vpn[118 WireGuard]
     end
@@ -40,7 +40,7 @@ flowchart LR
 ## Design choices
 
 - **Split ownership.** Terraform owns the Proxmox object (VMID, resources, NIC, IP, firewall). Ansible owns the software inside it. A drifting guest never causes a container rebuild.
-- **Single sign-on.** lldap holds users and TinyAuth acts as the OIDC issuer for Grafana, Proxmox, File Browser and AFFiNE. Each service keeps a local break-glass account.
+- **Single sign-on.** lldap holds users and TinyAuth acts as the OIDC issuer for Grafana, Proxmox and AFFiNE, and as Caddy forward-auth for Filestash. Each OIDC service keeps a local break-glass account.
 - **Correlated telemetry.** Harmony sends OTLP to one collector. Traces go to Tempo, logs to Loki, and request metrics are derived from spans. Grafana links a trace to its log lines and back.
 - **Closed by default.** Each guest firewall opens only the ports a rule names. Postgres and Redis are not published outside their Compose network.
 - **Encrypted secrets in git.** Every `*.sops.*` file is encrypted with age. Terraform state lives in a self-hosted S3 (Garage).
@@ -84,6 +84,7 @@ docs/                      documentation
 | [Observability](docs/observability.md) | Signals, dashboards, Harmony telemetry |
 | [Harmony](docs/harmony.md) | App, Cloudflare tunnel, image updates |
 | [AFFiNE](docs/affine.md) | App, OIDC login, deploy order |
+| [Filestash](docs/filestash.md) | App, forward-auth, managed config |
 | [Add a user](docs/add-user.md) | Create an lldap user |
 
 ## License

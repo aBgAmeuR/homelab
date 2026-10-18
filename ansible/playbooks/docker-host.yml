@@ -1,35 +1,32 @@
 ---
-- name: File Browser
+- name: Filestash
   hosts: docker
   become: true
   gather_facts: true
-  tags: [filebrowser, docker-host]
+  tags: [filestash, docker-host]
   vars:
-    compose_project_src: "{{ inventory_dir }}/../../docker/host/filebrowser"
-    compose_project_dest: /opt/filebrowser
-    compose_data_dir: /var/lib/filebrowser
+    compose_project_src: "{{ inventory_dir }}/../../docker/host/filestash"
+    compose_project_dest: /opt/filestash
+    compose_data_dir: /var/lib/filestash
     compose_data_owners:
-      data: "1000"
+      state: "1000"
     compose_templates:
-      - src: filebrowser.env.j2
-        dest: filebrowser.env
+      - src: filestash.env.j2
+        dest: filestash.env
         mode: "0600"
-    compose_health_url: http://127.0.0.1:8090/health
+    compose_health_url: http://127.0.0.1:8334/healthz
+    filestash_config_path: "{{ compose_data_dir }}/state/config/config.json"
   pre_tasks:
-    - name: Require the File Browser OIDC client pair
+    - name: Require the Filestash secrets
       ansible.builtin.assert:
         that:
-          - filebrowser_oidc_client_id is defined
-          - filebrowser_oidc_client_id | length > 0
-          - filebrowser_oidc_client_id != "CHANGE_ME"
-          - filebrowser_oidc_client_secret is defined
-          - filebrowser_oidc_client_secret | length > 0
-          - filebrowser_oidc_client_secret != "CHANGE_ME"
-          - filebrowser_admin_password is defined
-          - filebrowser_admin_password | length >= 8
+          - filestash_admin_password_hash is defined
+          - filestash_admin_password_hash is match('^\$2[aby]\$')
+          - filestash_local_backend_secret is defined
+          - filestash_local_backend_secret | length >= 16
         fail_msg: >-
-          Set filebrowser_oidc_client_id, filebrowser_oidc_client_secret and
-          filebrowser_admin_password in inventory/group_vars/all.sops.yml.
+          Set filestash_admin_password_hash (bcrypt) and
+          filestash_local_backend_secret in inventory/group_vars/all.sops.yml.
 
     - name: Look up the filebrowser dataset mount
       ansible.builtin.command:
@@ -69,6 +66,51 @@
     - baseline
     - docker
     - compose
+  post_tasks:
+    # Filestash rewrites config.json on every start, so only the managed keys
+    # are compared and merged into what it wrote.
+    - name: Read the Filestash config
+      ansible.builtin.slurp:
+        src: "{{ filestash_config_path }}"
+      register: filestash_config_file
+
+    - name: Merge the managed Filestash settings
+      ansible.builtin.set_fact:
+        filestash_config_current: "{{ filestash_config_file.content | b64decode | from_json }}"
+        filestash_config_wanted: >-
+          {{ filestash_config_file.content | b64decode | from_json
+             | combine(lookup('ansible.builtin.template', 'filestash-config.json.j2', convert_data=False)
+                       | from_json,
+                       recursive=True) }}
+      no_log: true
+
+    - name: Write the Filestash config
+      ansible.builtin.copy:
+        content: "{{ filestash_config_wanted | to_nice_json(indent=4) }}\n"
+        dest: "{{ filestash_config_path }}"
+        owner: "1000"
+        group: "1000"
+        mode: "0600"
+      register: filestash_config_write
+      when: filestash_config_wanted != filestash_config_current
+      no_log: true
+
+    - name: Restart Filestash on the new config
+      ansible.builtin.command:
+        cmd: docker compose restart filestash
+        chdir: "{{ compose_project_dest }}"
+      changed_when: true
+      when: filestash_config_write is changed
+
+    - name: Wait until Filestash answers again
+      ansible.builtin.uri:
+        url: "{{ compose_health_url }}"
+        status_code: 200
+      register: filestash_health
+      retries: "{{ compose_health_retries }}"
+      delay: "{{ compose_health_delay }}"
+      until: filestash_health.status == 200
+      when: filestash_config_write is changed
 
 - name: Host exporters
   hosts: docker

@@ -121,9 +121,9 @@ firewall_extra_rules = {
     {
       type    = "in"
       action  = "ACCEPT"
-      dport   = "8090"
+      dport   = "8334"
       source  = "192.168.1.113"
-      comment = "File Browser from Caddy"
+      comment = "Filestash from Caddy"
     },
     {
       type    = "in"

@@ -17,7 +17,7 @@ blocky_custom_dns:
   - { name: "auth.{{ lab_domain }}", ip: 192.168.1.113 }
   - { name: "caddy.{{ lab_domain }}", ip: 192.168.1.113 }
   - { name: "docs.{{ lab_domain }}", ip: 192.168.1.113 }
-  - { name: "filebrowser.{{ lab_domain }}", ip: 192.168.1.113 }
+  - { name: "files.{{ lab_domain }}", ip: 192.168.1.113 }
   - { name: "monitoring.{{ lab_domain }}", ip: 192.168.1.113 }
   # Guests and fixed hosts
   - { name: "garage.{{ lab_domain }}", ip: 192.168.1.112 }
@@ -26,7 +26,6 @@ blocky_custom_dns:
   - { name: "ai.{{ lab_domain }}", ip: 192.168.1.100 }
   - { name: "cockpit.{{ lab_domain }}", ip: 192.168.1.100 }
   - { name: "docker.{{ lab_domain }}", ip: 192.168.1.100 }
-  - { name: "files.{{ lab_domain }}", ip: 192.168.1.100 }
   - { name: "grafana.{{ lab_domain }}", ip: 192.168.1.100 }
   - { name: "nas.{{ lab_domain }}", ip: 192.168.1.100 }
   - { name: "nginx.{{ lab_domain }}", ip: 192.168.1.100 }

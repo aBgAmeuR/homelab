@@ -1,0 +1,17 @@
+name: filestash
+
+services:
+  filestash:
+    restart: unless-stopped
+    image: machines/filestash:latest@sha256:e35e58f108d243bd71df44fe10ab0e0a40f61c50e149b6bf3dccfc3e409c3401
+    user: "1000:1000"
+    env_file:
+      - filestash.env
+    environment:
+      # Keep the IdP and mapping params in clear text so Ansible can compare them.
+      CONFIG_ENCRYPT: "false"
+    volumes:
+      - /var/lib/filestash/state:/app/data/state
+      - /mnt/filebrowser:/srv
+    ports:
+      - "0.0.0.0:8334:8334"

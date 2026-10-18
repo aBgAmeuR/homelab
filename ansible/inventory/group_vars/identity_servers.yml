@@ -18,11 +18,6 @@ tinyauth_oidc_clients:
     client_secret: "{{ grafana_oidc_client_secret }}"
     redirect_uri: "https://monitoring.{{ lab_domain }}/login/generic_oauth"
     display_name: Grafana
-  - env_name: FILEBROWSER
-    client_id: "{{ filebrowser_oidc_client_id }}"
-    client_secret: "{{ filebrowser_oidc_client_secret }}"
-    redirect_uri: "https://filebrowser.{{ lab_domain }}/api/auth/oidc/callback"
-    display_name: File Browser
   - env_name: PROXMOX
     client_id: "{{ proxmox_oidc_client_id }}"
     client_secret: "{{ proxmox_oidc_client_secret }}"

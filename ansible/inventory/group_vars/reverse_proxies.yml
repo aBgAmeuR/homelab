@@ -1,5 +1,7 @@
 ---
 caddy_otel_collector_host: 192.168.1.111
+# TinyAuth, for sites with forward_auth: true. Their health_path skips it.
+caddy_forward_auth_upstream: "192.168.1.114:3000"
 caddy_sites:
   - host: "monitoring.{{ lab_domain }}"
     upstream: "192.168.1.111:3000"
@@ -7,9 +9,10 @@ caddy_sites:
   - host: "auth.{{ lab_domain }}"
     upstream: "192.168.1.114:3000"
     health_path: /api/healthz
-  - host: "filebrowser.{{ lab_domain }}"
-    upstream: "192.168.1.115:8090"
-    health_path: /health
+  - host: "files.{{ lab_domain }}"
+    upstream: "192.168.1.115:8334"
+    health_path: /healthz
+    forward_auth: true
   - host: "docs.{{ lab_domain }}"
     upstream: "192.168.1.115:3010"
     health_path: /info

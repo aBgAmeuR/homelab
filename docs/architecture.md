@@ -30,7 +30,7 @@ Neither tool touches the other's side, so a drifting guest never causes a contai
 | 112 | 192.168.1.112 | garage | Terraform state, S3 on :3900 |
 | 113 | 192.168.1.113 | caddy | Reverse proxy |
 | 114 | 192.168.1.114 | auth | lldap + TinyAuth |
-| 115 | 192.168.1.115 | docker | Compose host: Harmony, File Browser, AFFiNE, node-exporter, cAdvisor |
+| 115 | 192.168.1.115 | docker | Compose host: Harmony, Filestash, AFFiNE, node-exporter, cAdvisor |
 | 116 | 192.168.1.116 | dns | Blocky + dnsmasq |
 | 118 | 192.168.1.118 | vpn | WireGuard |
 
@@ -48,6 +48,7 @@ Neither tool touches the other's side, so a drifting guest never causes a contai
 - [Auth](auth.md)
 - [Harmony](harmony.md)
 - [AFFiNE](affine.md)
+- [Filestash](filestash.md)
 - [Add a user](add-user.md)
 - [Bootstrap](bootstrap.md): what is done by hand
 - [Operations](operations.md): commands and secrets

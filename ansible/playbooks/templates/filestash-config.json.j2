@@ -1,0 +1,26 @@
+{
+  "general": {
+    "name": "Files",
+    "host": {{ ("files." ~ lab_domain) | to_json }},
+    "force_ssl": true
+  },
+  "auth": {
+    "admin": {{ filestash_admin_password_hash | to_json }}
+  },
+  "middleware": {
+    "identity_provider": {
+      "type": "passthrough",
+      "params": {{ {"type": "passthrough", "strategy": "direct"} | to_json | to_json }}
+    },
+    "attribute_mapping": {
+      "related_backend": "Files",
+      "params": {{ {"Files": {"type": "local", "path": "/srv/", "password": filestash_local_backend_secret}} | to_json | to_json }}
+    }
+  },
+  "connections": [
+    {
+      "type": "local",
+      "label": "Files"
+    }
+  ]
+}
