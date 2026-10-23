@@ -16,3 +16,6 @@ caddy_sites:
   - host: "docs.{{ lab_domain }}"
     upstream: "192.168.1.115:3010"
     health_path: /info
+  - host: "proxmox.{{ lab_domain }}"
+    upstream: "https://192.168.1.110:8006"
+    upstream_tls_insecure: true

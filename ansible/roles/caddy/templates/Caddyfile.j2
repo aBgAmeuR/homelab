@@ -20,7 +20,15 @@
 		uri /api/auth/caddy
 	}
 {% endif %}
+{% if site.upstream_tls_insecure | default(false) %}
+	reverse_proxy {{ site.upstream }} {
+		transport http {
+			tls_insecure_skip_verify
+		}
+	}
+{% else %}
 	reverse_proxy {{ site.upstream }}
+{% endif %}
 }
 
 {% endfor %}
