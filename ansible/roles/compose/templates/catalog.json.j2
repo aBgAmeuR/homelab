@@ -1,5 +1,3 @@
-{#- What the homelab is made of, from the inventory: guests, their services
-    and metric jobs, and the Caddy sites. Read by Jarvis; no secrets here. -#}
 {%- set proxy = groups['reverse_proxies'] | first -%}
 {%- set by_ip = {} -%}
 {%- for host in groups['all'] -%}

@@ -1,12 +1,6 @@
-# Health of each guest, keyed by vmid. Each component is 1 (ok) or 0, and
-# vmid:health:min is the lowest component: 1 when every check passes.
-# A guest only gets the components that apply to it (no containers on CT 116,
-# no local scrape on CT 114). Guests that do not start at boot (the stopped
-# legacy CTs) get no health series.
 groups:
   - name: supervision
     rules:
-      # Proxmox runs the guest. Only for guests that start at boot.
       - record: vmid:health_component:bool
         labels:
           component: running
@@ -15,8 +9,8 @@ groups:
             and on (vmid)
           (max by (vmid) (pve_onboot_status{id=~"(lxc|qemu)/.+"}) == 1)
 
-      # Alloy pushed its host scrape in the last 5 minutes. Guests with a ping
-      # probe are the ones expected to run Alloy, so a silent agent reads 0.
+      # Guests with a ping probe are the ones expected to run Alloy, so a
+      # silent agent reads 0.
       - record: vmid:health_component:bool
         labels:
           component: agent
@@ -25,25 +19,21 @@ groups:
             or on (vmid)
           (max by (vmid) (probe_success{job="probe_icmp", vmid!=""}) * 0)
 
-      # Every unit listed in alloy_systemd_units is active.
       - record: vmid:health_component:bool
         labels:
           component: services
         expr: min by (vmid) (node_systemd_unit_state{job="node", state="active", vmid!=""})
 
-      # Every container runs and is not unhealthy (or exited with code 0).
       - record: vmid:health_component:bool
         labels:
           component: containers
         expr: min by (vmid) (docker_container_ok{vmid!=""})
 
-      # Local metric endpoints scraped by Alloy (Blocky, Garage, cAdvisor).
       - record: vmid:health_component:bool
         labels:
           component: endpoints
         expr: min by (vmid) (up{job!~"node|probe_.+", vmid!=""})
 
-      # Ping, HTTPS through Caddy, DNS answer: all succeed.
       - record: vmid:health_component:bool
         labels:
           component: probes

@@ -22,7 +22,7 @@ variable "extra_rules" {
   description = "Optional per-container extra firewall rules, keyed by the same logical name used in container_ids"
   type = map(list(object({
     type    = string # "in" or "out"
-    action  = string # "ACCEPT" or "DROP"
+    action  = string
     proto   = optional(string, "tcp")
     dport   = optional(string, "")
     source  = optional(string, "")

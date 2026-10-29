@@ -1,6 +1,4 @@
 #!/bin/bash
-# Writes `wg show all dump` as Prometheus metrics for the textfile collector
-# (Alloy). Usage: wireguard-metrics PEER_NAMES_FILE OUTPUT_FILE
 set -euo pipefail
 
 names="$1"

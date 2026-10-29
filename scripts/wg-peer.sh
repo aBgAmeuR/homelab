@@ -1,10 +1,4 @@
 #!/bin/bash
-# Creates a WireGuard client: prints its configuration (and a QR code when
-# qrencode is installed) and the line to add to wireguard_peers.
-# The client's private key is printed once and never written to the repository.
-#
-# Usage: WG_ENDPOINT=<public host or IP>:<port> scripts/wg-peer.sh <name> <tunnel address>
-# WG_ALLOWED_IPS defaults to 0.0.0.0/0 (all traffic). Use 192.168.1.0/24 for the LAN only.
 set -euo pipefail
 
 name="${1:?name, e.g. laptop}"

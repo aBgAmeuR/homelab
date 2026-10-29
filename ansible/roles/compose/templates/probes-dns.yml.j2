@@ -1,4 +1,3 @@
-# Managed by Ansible: every DNS server of the inventory.
 {% for host in groups['dns_servers'] | sort %}
 - targets: ["{{ hostvars[host].ansible_host }}"]
   labels:

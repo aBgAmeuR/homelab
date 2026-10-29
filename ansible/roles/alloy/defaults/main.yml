@@ -8,25 +8,18 @@ alloy_config: /etc/alloy/config.alloy
 alloy_env_file: /etc/default/alloy
 alloy_user: alloy
 alloy_http_listen: 127.0.0.1:12345
-# Soft limit for the Go runtime (GOMEMLIMIT). The smallest guests have 512 MB.
 alloy_memory_limit: 160MiB
 
-# Both on CT 111. The guest firewall there opens 9090 and 3100 to the guests.
 alloy_prometheus_url: http://192.168.1.111:9090/api/v1/write
 alloy_loki_url: http://192.168.1.111:3100/loki/api/v1/push
 alloy_scrape_interval: 30s
 alloy_journal_max_age: 12h
 
-# Every series and log line of the guest carries instance and vmid.
 alloy_instance: "{{ inventory_hostname }}"
 alloy_vmid: "{{ vmid }}"
 
-# node-exporter's textfile directory. The wireguard role and the Docker
-# container metrics timer write *.prom files here.
 alloy_textfile_dir: /var/lib/prometheus/node-exporter
 
-# Units reported in node_systemd_unit_state: the services of the guest.
-# alloy.service is always added.
 alloy_systemd_units: []
 
 # Local metric endpoints, pushed with job=<job>, instance=<alloy_instance>.
@@ -39,14 +32,12 @@ alloy_scrape_targets: []
 # { unit, fields: [...] }
 alloy_journal_json_units: []
 
-# Docker hosts: container logs, cAdvisor and a container state textfile.
 alloy_docker: false
 alloy_cadvisor_address: 127.0.0.1:8080
 alloy_docker_metrics_interval: 30s
 # Compose services that already send their logs over OTLP.
 alloy_docker_logs_exclude: []
 
-# Agents that Alloy replaces.
 alloy_legacy_packages:
   - prometheus-node-exporter
   - otelcol-contrib

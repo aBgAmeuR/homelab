@@ -5,7 +5,6 @@
     state: restarted
     daemon_reload: true
 
-# SIGHUP: Alloy reloads its config and keeps its WAL and journal positions.
 - name: Reload alloy
   ansible.builtin.systemd:
     name: alloy

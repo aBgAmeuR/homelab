@@ -3,15 +3,11 @@ blocky_upstreams:
   - 1.1.1.1
   - 1.0.0.1
 
-# HaGeZi Pro, wildcard format.
 blocky_denylists:
   - https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/pro.txt
 
-# Domains HaGeZi blocks that must keep working.
 blocky_allowlist: []
 
-# Local records. No wildcard on lab_domain: the Harmony hostname must keep
-# resolving to Cloudflare. Copied from Pi-hole on 2026-10-16.
 blocky_custom_dns:
   - { name: "auth.{{ lab_domain }}", ip: 192.168.1.113 }
   - { name: "caddy.{{ lab_domain }}", ip: 192.168.1.113 }

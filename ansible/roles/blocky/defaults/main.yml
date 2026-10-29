@@ -15,10 +15,7 @@ blocky_upstreams:
   - 1.1.1.1
   - 1.0.0.1
 blocky_denylists: []
-# Domains to unblock, one per entry.
 blocky_allowlist: []
-# Local records as name/ip pairs. A name also covers all its subdomains.
 blocky_custom_dns: []
-# Domain served by dnsmasq for DHCP client names, and where to ask for it.
 blocky_local_domain: "{{ dnsmasq_domain | default('lan') }}"
 blocky_local_resolver: "127.0.0.1:{{ dnsmasq_dns_port | default(5353) }}"

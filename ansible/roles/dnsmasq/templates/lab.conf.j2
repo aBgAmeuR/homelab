@@ -1,5 +1,3 @@
-# Managed by Ansible.
-# DNS: loopback only, no upstream. It answers for the names of its own DHCP leases.
 port={{ dnsmasq_dns_port }}
 # bind-dynamic tolerates eth0 coming up after dnsmasq; bind-interfaces exits at boot.
 bind-dynamic
@@ -10,7 +8,7 @@ domain={{ dnsmasq_domain }}
 local=/{{ dnsmasq_domain }}/
 {% if dnsmasq_dhcp_enabled %}
 
-# DHCP. The guest firewall drops the DNS port on this interface.
+# The guest firewall drops the DNS port on this interface.
 interface={{ dnsmasq_interface }}
 dhcp-authoritative
 dhcp-range={{ dnsmasq_dhcp_range_start }},{{ dnsmasq_dhcp_range_end }},{{ dnsmasq_dhcp_lease_time }}

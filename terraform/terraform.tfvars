@@ -1,6 +1,5 @@
 node_name = "pve"
 
-# Leave empty to inject ~/.ssh/jarvis_ed25519.pub
 ssh_public_keys = []
 
 containers = {

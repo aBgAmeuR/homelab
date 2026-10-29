@@ -6,8 +6,6 @@
       - alloy_vmid | string | length > 0
     fail_msg: Set vmid for this host in inventory/hosts.yml.
 
-# The Debian node-exporter (CT 118) and the journald otelcol (CT 116) did what
-# Alloy does now.
 - name: Remove the agents Alloy replaces
   ansible.builtin.apt:
     name: "{{ alloy_legacy_packages }}"
@@ -98,7 +96,6 @@
     mode: "0644"
   notify: Restart alloy
 
-# The config holds the Garage metrics token on CT 112.
 - name: Install the Alloy configuration
   ansible.builtin.template:
     src: config.alloy.j2

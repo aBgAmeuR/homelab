@@ -1,11 +1,10 @@
 ---
 dnsmasq_config: /etc/dnsmasq.d/lab.conf
-# DNS stays on loopback: Blocky asks it for the names of DHCP clients.
 dnsmasq_dns_port: 5353
 dnsmasq_domain: lan
 dnsmasq_interface: eth0
 
-# Off until the cutover from Pi-hole. Two DHCP servers on one LAN hand out conflicting leases.
+# Two DHCP servers on one LAN hand out conflicting leases.
 dnsmasq_dhcp_enabled: false
 dnsmasq_dhcp_range_start: 192.168.1.20
 dnsmasq_dhcp_range_end: 192.168.1.100

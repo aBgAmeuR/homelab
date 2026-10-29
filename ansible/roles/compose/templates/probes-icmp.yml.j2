@@ -1,4 +1,3 @@
-# Managed by Ansible: every guest of the inventory, and the Proxmox host.
 {% for host in groups['all'] | sort %}
 - targets: ["{{ hostvars[host].ansible_host }}"]
   labels:

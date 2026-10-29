@@ -50,6 +50,15 @@
     state: absent
   loop: "{{ compose_remove_files }}"
 
+- name: Create the directories of the compose templates
+  ansible.builtin.file:
+    path: "{{ compose_project_dest }}/{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop: "{{ compose_templates | map(attribute='dest') | map('dirname') | select | unique }}"
+
 - name: Install compose secret and overlay files
   ansible.builtin.template:
     src: "{{ item.src }}"

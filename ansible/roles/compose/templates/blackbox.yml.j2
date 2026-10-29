@@ -1,4 +1,3 @@
-# Managed by Ansible. Timeouts stay under Prometheus' 10 s scrape timeout.
 {% set proxy = groups['reverse_proxies'] | first %}
 modules:
   icmp:
@@ -8,7 +7,6 @@ modules:
       preferred_ip_protocol: ip4
       ip_protocol_fallback: false
 
-  # Through Caddy, like a browser: DNS, TLS, proxy and the app's health path.
   http_2xx:
     prober: http
     timeout: 8s
@@ -17,7 +15,6 @@ modules:
       ip_protocol_fallback: false
       fail_if_not_ssl: true
 
-  # Blocky must answer a local record with Caddy's address.
   dns_lab:
     prober: dns
     timeout: 5s

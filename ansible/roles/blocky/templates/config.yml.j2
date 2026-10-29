@@ -1,4 +1,3 @@
-# Managed by Ansible.
 upstreams:
   init:
     strategy: fast
@@ -25,7 +24,6 @@ customDNS:
     {{ record.name }}: {{ record.ip }}
 {% endfor %}
 
-# Client names from DHCP (for example pc-antoine.lan), answered by dnsmasq.
 conditional:
   mapping:
     {{ blocky_local_domain }}: {{ blocky_local_resolver }}
@@ -58,7 +56,6 @@ blocking:
     strategy: fast
     downloads:
       timeout: 60s
-      # Serves the last good copy when GitHub is unreachable at boot.
       cachePath: {{ blocky_lists_cache }}
 
 caching:

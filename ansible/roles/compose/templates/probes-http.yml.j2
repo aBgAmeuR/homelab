@@ -1,5 +1,3 @@
-# Managed by Ansible: every Caddy site on its health path. instance and vmid
-# are the guest behind the site (its upstream).
 {% set proxy = groups['reverse_proxies'] | first %}
 {% set by_ip = {} %}
 {% for host in groups['all'] %}

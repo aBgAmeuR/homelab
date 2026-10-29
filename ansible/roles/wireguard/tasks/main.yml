@@ -56,6 +56,13 @@
     validate: nft -c -f %s
   notify: Restart wireguard
 
+- name: Read the current WireGuard configuration
+  ansible.builtin.slurp:
+    src: "/etc/wireguard/{{ wireguard_interface }}.conf"
+  register: wireguard_conf_before
+  failed_when: false
+  no_log: true
+
 - name: Install the WireGuard configuration
   ansible.builtin.template:
     src: wg.conf.j2
@@ -63,8 +70,31 @@
     owner: root
     group: root
     mode: "0600"
+  register: wireguard_conf
   no_log: true
   notify: Reload wireguard
+
+- name: Read the new WireGuard configuration
+  ansible.builtin.slurp:
+    src: "/etc/wireguard/{{ wireguard_interface }}.conf"
+  register: wireguard_conf_after
+  when: wireguard_conf is changed
+  no_log: true
+
+# The reload runs wg syncconf, which applies keys, port and peers but not the
+# wg-quick settings (Address, MTU, PostUp, ...).
+- name: Restart WireGuard for changed wg-quick settings
+  ansible.builtin.debug:
+    msg: "wg-quick settings of {{ wireguard_interface }} changed"
+  changed_when: true
+  notify: Restart wireguard
+  when:
+    - wireguard_conf is changed
+    - wireguard_quick_before != wireguard_quick_after
+  vars:
+    wireguard_quick_keys: '^\s*(Address|DNS|MTU|Table|PreUp|PostUp|PreDown|PostDown|SaveConfig)\s*='
+    wireguard_quick_before: "{{ (wireguard_conf_before.content | default('') | b64decode).splitlines() | select('match', wireguard_quick_keys) | list }}"
+    wireguard_quick_after: "{{ (wireguard_conf_after.content | b64decode).splitlines() | select('match', wireguard_quick_keys) | list }}"
 
 - name: Enable and start WireGuard
   ansible.builtin.systemd:

@@ -1,6 +1,5 @@
 name: exporters
 
-# Host metrics come from Alloy on the guest, which also scrapes cAdvisor here.
 services:
   cadvisor:
     restart: unless-stopped
