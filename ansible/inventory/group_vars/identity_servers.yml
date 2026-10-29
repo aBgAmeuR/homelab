@@ -1,4 +1,8 @@
 ---
+alloy_systemd_units:
+  - lldap.service
+  - tinyauth.service
+
 # Loaded for both lldap and tinyauth (tinyauth needs LDAP bind settings).
 lldap_http_port: 17170
 lldap_ldap_port: 3890

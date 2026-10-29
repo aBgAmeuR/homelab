@@ -1,0 +1,128 @@
+---
+- name: Require the guest labels
+  ansible.builtin.assert:
+    that:
+      - alloy_instance | length > 0
+      - alloy_vmid | string | length > 0
+    fail_msg: Set vmid for this host in inventory/hosts.yml.
+
+# The Debian node-exporter (CT 118) and the journald otelcol (CT 116) did what
+# Alloy does now.
+- name: Remove the agents Alloy replaces
+  ansible.builtin.apt:
+    name: "{{ alloy_legacy_packages }}"
+    state: absent
+    purge: true
+
+- name: Remove what the replaced agents left behind
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop: "{{ alloy_legacy_paths }}"
+
+- name: Create the Alloy download cache
+  ansible.builtin.file:
+    path: "{{ alloy_cache | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Download pinned Alloy package
+  ansible.builtin.get_url:
+    url: "{{ alloy_download_url }}"
+    dest: "{{ alloy_cache }}"
+    checksum: "{{ alloy_checksum }}"
+    mode: "0640"
+    owner: root
+    group: root
+
+- name: Install Alloy
+  ansible.builtin.apt:
+    deb: "{{ alloy_cache }}"
+  notify: Restart alloy
+
+- name: Create the textfile collector directory
+  ansible.builtin.file:
+    path: "{{ alloy_textfile_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+# The package already adds the user to adm and systemd-journal.
+- name: Let Alloy read container logs
+  ansible.builtin.user:
+    name: "{{ alloy_user }}"
+    groups: docker
+    append: true
+  when: alloy_docker
+  notify: Restart alloy
+
+- name: Install the container metrics script
+  ansible.builtin.copy:
+    src: docker-metrics
+    dest: /usr/local/bin/docker-metrics
+    owner: root
+    group: root
+    mode: "0755"
+  when: alloy_docker
+
+- name: Install the container metrics units
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - docker-metrics.service
+    - docker-metrics.timer
+  when: alloy_docker
+  notify: Restart docker metrics timer
+
+- name: Enable and start the container metrics timer
+  ansible.builtin.systemd:
+    name: docker-metrics.timer
+    enabled: true
+    state: started
+    daemon_reload: true
+  when: alloy_docker
+
+- name: Install the Alloy environment
+  ansible.builtin.template:
+    src: alloy.env.j2
+    dest: "{{ alloy_env_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart alloy
+
+# The config holds the Garage metrics token on CT 112.
+- name: Install the Alloy configuration
+  ansible.builtin.template:
+    src: config.alloy.j2
+    dest: "{{ alloy_config }}"
+    owner: root
+    group: "{{ alloy_user }}"
+    mode: "0640"
+    validate: /usr/bin/alloy validate %s
+  notify: Reload alloy
+
+- name: Enable and start Alloy
+  ansible.builtin.systemd:
+    name: alloy
+    enabled: true
+    state: started
+
+- name: Apply pending Alloy restarts
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait until Alloy is ready
+  ansible.builtin.uri:
+    url: "http://{{ alloy_http_listen }}/-/ready"
+    status_code: 200
+  register: alloy_ready
+  retries: 12
+  delay: 5
+  until: alloy_ready.status == 200

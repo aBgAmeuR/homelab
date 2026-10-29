@@ -1,0 +1,6 @@
+---
+alloy_docker: true
+alloy_systemd_units:
+  - docker.service
+  - containerd.service
+  - docker-metrics.timer

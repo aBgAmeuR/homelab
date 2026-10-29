@@ -2,15 +2,17 @@ global:
   scrape_interval: 30s
   evaluation_interval: 30s
 
+storage:
+  tsdb:
+    out_of_order_time_window: 30m
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
 scrape_configs:
   - job_name: prometheus
     static_configs:
       - targets: ["localhost:9090"]
-
-  - job_name: node
-    file_sd_configs:
-      - files:
-          - /etc/prometheus/targets/nodes.yml
 
   - job_name: lgtm
     static_configs:
@@ -19,17 +21,7 @@ scrape_configs:
           - tempo:3200
           - pyroscope:4040
           - otel-collector:8888
-
-  - job_name: cadvisor
-    file_sd_configs:
-      - files:
-          - /etc/prometheus/targets/cadvisor.yml
-
-  - job_name: blocky
-    static_configs:
-      - targets: ["192.168.1.116:4000"]
-        labels:
-          instance: dns
+          - blackbox-exporter:9115
 
   - job_name: pve
     metrics_path: /pve
@@ -46,3 +38,38 @@ scrape_configs:
         target_label: instance
       - target_label: __address__
         replacement: pve-exporter:9221
+    metric_relabel_configs:
+      - source_labels: [id]
+        regex: (lxc|qemu)/(\d+)
+        target_label: vmid
+        replacement: $2
+
+  - job_name: probe_icmp
+    metrics_path: /probe
+    params:
+      module: [icmp]
+    file_sd_configs:
+      - files: [/etc/prometheus/targets/probes-icmp.yml]
+    relabel_configs: &probe_relabel
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: target
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  - job_name: probe_http
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    file_sd_configs:
+      - files: [/etc/prometheus/targets/probes-http.yml]
+    relabel_configs: *probe_relabel
+
+  - job_name: probe_dns
+    metrics_path: /probe
+    params:
+      module: [dns_lab]
+    file_sd_configs:
+      - files: [/etc/prometheus/targets/probes-dns.yml]
+    relabel_configs: *probe_relabel

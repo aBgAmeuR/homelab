@@ -1,0 +1,205 @@
+// Managed by Ansible. Metrics go to Prometheus and logs to Loki, both on CT 111.
+// Every series and log line carries instance="{{ alloy_instance }}" and vmid="{{ alloy_vmid }}".
+{% set units = (alloy_systemd_units + ['alloy.service']) | unique %}
+{% set scrape_targets = alloy_scrape_targets + ([{'job': 'cadvisor', 'address': alloy_cadvisor_address}] if alloy_docker else []) %}
+
+logging {
+  level  = "warn"
+  format = "logfmt"
+}
+
+// ---------------------------------------------------------------- metrics
+
+prometheus.remote_write "monitoring" {
+  endpoint {
+    url = {{ alloy_prometheus_url | to_json }}
+  }
+
+  external_labels = {
+    vmid = {{ alloy_vmid | string | to_json }},
+  }
+}
+
+// node-exporter, built in. Hardware collectors have nothing to read in an LXC.
+// diskstats would report the host's block devices, not the guest's I/O
+// (pve-exporter has that), and logs a udev error at start.
+prometheus.exporter.unix "host" {
+  enable_collectors  = ["systemd"]
+  disable_collectors = [
+    "arp", "bcache", "bonding", "btrfs", "cpufreq", "diskstats", "dmi", "edac",
+    "fibrechannel", "hwmon", "infiniband", "ipvs", "mdadm", "nfs", "nfsd", "nvme",
+    "powersupplyclass", "rapl", "schedstat", "tapestats", "thermal_zone", "xfs", "zfs",
+  ]
+
+  textfile {
+    directory = {{ alloy_textfile_dir | to_json }}
+  }
+
+  // Anchored by node-exporter. These units are the services of the guest.
+  systemd {
+    unit_include = `{{ units | map('regex_escape') | join('|') }}`
+  }
+}
+
+// Same job and instance as the old node-exporter scrape, so the
+// "Node Exporter Full" dashboard keeps working.
+discovery.relabel "host" {
+  targets = prometheus.exporter.unix.host.targets
+
+  rule {
+    target_label = "job"
+    replacement  = "node"
+  }
+
+  rule {
+    target_label = "instance"
+    replacement  = {{ alloy_instance | to_json }}
+  }
+}
+
+prometheus.scrape "host" {
+  targets         = discovery.relabel.host.output
+  scrape_interval = {{ alloy_scrape_interval | to_json }}
+  forward_to      = [prometheus.remote_write.monitoring.receiver]
+}
+{% for target in scrape_targets %}
+
+prometheus.scrape {{ target.job | regex_replace('[^A-Za-z0-9_]', '_') | to_json }} {
+  targets = [{
+    __address__ = {{ target.address | to_json }},
+    job         = {{ target.job | to_json }},
+    instance    = {{ alloy_instance | to_json }},
+  }]
+  metrics_path    = {{ target.path | default('/metrics') | to_json }}
+  scrape_interval = {{ alloy_scrape_interval | to_json }}
+{% if target.bearer_token is defined %}
+  bearer_token    = {{ target.bearer_token | to_json }}
+{% endif %}
+  forward_to      = [prometheus.remote_write.monitoring.receiver]
+}
+{% endfor %}
+
+// ------------------------------------------------------------------- logs
+
+loki.write "monitoring" {
+  endpoint {
+    url = {{ alloy_loki_url | to_json }}
+  }
+
+  external_labels = {
+    instance = {{ alloy_instance | to_json }},
+    vmid     = {{ alloy_vmid | string | to_json }},
+  }
+}
+
+// service_name: the unit without .service, else the syslog identifier
+// (kernel, sshd sessions, cron).
+loki.relabel "journal" {
+  forward_to = []
+
+  rule {
+    source_labels = ["__journal__systemd_unit"]
+    target_label  = "unit"
+  }
+
+  rule {
+    source_labels = ["__journal_syslog_identifier"]
+    target_label  = "service_name"
+  }
+
+  rule {
+    source_labels = ["__journal__systemd_unit"]
+    regex         = `(.+)\.service`
+    target_label  = "service_name"
+  }
+
+  rule {
+    source_labels = ["__journal_priority_keyword"]
+    target_label  = "level"
+  }
+}
+
+loki.source.journal "system" {
+  max_age       = {{ alloy_journal_max_age | to_json }}
+  relabel_rules = loki.relabel.journal.rules
+  forward_to    = [loki.process.journal.receiver]
+}
+
+loki.process "journal" {
+  // loki.source.journal adds job="loki.source.journal.system": it says nothing.
+  stage.label_drop {
+    values = ["job"]
+  }
+
+{% for source in alloy_journal_json_units %}
+  // {{ source.unit }} writes JSON: its fields become structured metadata,
+  // and its own level replaces the journald priority.
+  stage.match {
+    selector = `{unit="{{ source.unit }}"}`
+
+    stage.label_drop {
+      values = ["level"]
+    }
+
+    stage.json {
+      expressions = {
+{% for field in source.fields %}
+        {{ field }} = "",
+{% endfor %}
+      }
+    }
+
+    stage.structured_metadata {
+      values = {
+{% for field in source.fields %}
+        {{ field }} = "",
+{% endfor %}
+      }
+    }
+  }
+
+{% endfor %}
+  forward_to = [loki.write.monitoring.receiver]
+}
+{% if alloy_docker %}
+
+// Container stdout and stderr. service_name is the Compose service.
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "containers" {
+  targets = discovery.docker.containers.targets
+{% if alloy_docker_logs_exclude | length > 0 %}
+
+  // These send their logs over OTLP already.
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    regex         = `{{ alloy_docker_logs_exclude | map('regex_escape') | join('|') }}`
+    action        = "drop"
+  }
+{% endif %}
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = `/(.*)`
+    target_label  = "container"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    target_label  = "compose_project"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service_name"
+  }
+}
+
+loki.source.docker "containers" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.containers.output
+  forward_to = [loki.write.monitoring.receiver]
+}
+{% endif %}

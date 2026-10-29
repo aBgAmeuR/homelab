@@ -1,4 +1,7 @@
 ---
+alloy_systemd_units:
+  - caddy.service
+
 caddy_otel_collector_host: 192.168.1.111
 # TinyAuth, for sites with forward_auth: true. Their health_path skips it.
 caddy_forward_auth_upstream: "192.168.1.114:3000"

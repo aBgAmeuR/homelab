@@ -1,0 +1,18 @@
+---
+- name: Restart alloy
+  ansible.builtin.systemd:
+    name: alloy
+    state: restarted
+    daemon_reload: true
+
+# SIGHUP: Alloy reloads its config and keeps its WAL and journal positions.
+- name: Reload alloy
+  ansible.builtin.systemd:
+    name: alloy
+    state: reloaded
+
+- name: Restart docker metrics timer
+  ansible.builtin.systemd:
+    name: docker-metrics.timer
+    state: restarted
+    daemon_reload: true

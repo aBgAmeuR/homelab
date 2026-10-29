@@ -20,14 +20,6 @@
       "prBodyNotes": [
         "Update the matching `*_checksum` in the same file before merging: `get_url` refuses the new release until the sha256 matches."
       ]
-    },
-    {
-      "description": "Keep the collector on CT 116 and the one on CT 111 at the same version",
-      "matchPackageNames": [
-        "open-telemetry/opentelemetry-collector-releases",
-        "otel/opentelemetry-collector-contrib"
-      ],
-      "groupName": "OpenTelemetry Collector"
     }
   ]
 }

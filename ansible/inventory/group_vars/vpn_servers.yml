@@ -6,3 +6,7 @@ wireguard_network: 10.0.0.0/24
 # New peer: task wg:peer -- <name> <address>, then add the line it prints.
 wireguard_peers:
   - { name: client-1, address: 10.0.0.2, public_key: "Hn6LpS9+hMNe+ofCg412InkkBgn/JX5jx8aRY88Irgc=" }
+
+alloy_systemd_units:
+  - "wg-quick@{{ wireguard_interface | default('wg0') }}.service"
+  - wireguard-metrics.timer

@@ -20,8 +20,8 @@ DHCP announces `192.168.1.116` then `1.1.1.1`. A client that picks `1.1.1.1` get
 
 ## Observability
 
-- Metrics: Prometheus job `blocky` scrapes `:4000`.
-- Logs: Blocky writes JSON to journald. An `otelcol-contrib` on CT 116 (role `otelcol`) reads the unit, parses each line into attributes and sends OTLP to `192.168.1.111:4318`. In Loki the stream is `{service_name="blocky"}` and every JSON field is structured metadata, so no `| json` is needed:
+- Metrics: Alloy on CT 116 scrapes `127.0.0.1:4000` and pushes it as job `blocky`, `instance="dns"`.
+- Logs: Blocky writes JSON to journald. Alloy on CT 116 reads the journal and copies the fields listed in `alloy_journal_json_units` (`ansible/inventory/group_vars/dns_servers.yml`) into structured metadata, so no `| json` is needed. Blocky's own `level` replaces the journald priority. In Loki the stream is `{service_name="blocky"}`:
 
   ```logql
   {service_name="blocky"} | prefix="queryLog" | response_type="BLOCKED"

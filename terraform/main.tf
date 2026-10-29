@@ -21,5 +21,6 @@ module "firewall" {
 
   node_name     = var.node_name
   container_ids = module.lxc.container_ids
+  probe_source  = "192.168.1.111"
   extra_rules   = var.firewall_extra_rules
 }

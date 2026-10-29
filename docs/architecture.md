@@ -30,15 +30,17 @@ Neither tool touches the other's side, so a drifting guest never causes a contai
 | 112 | 192.168.1.112 | garage | Terraform state, S3 on :3900 |
 | 113 | 192.168.1.113 | caddy | Reverse proxy |
 | 114 | 192.168.1.114 | auth | lldap + TinyAuth |
-| 115 | 192.168.1.115 | docker | Compose host: Harmony, Filestash, AFFiNE, node-exporter, cAdvisor |
+| 115 | 192.168.1.115 | docker | Compose host: Harmony, Filestash, AFFiNE, cAdvisor |
 | 116 | 192.168.1.116 | dns | Blocky + dnsmasq |
 | 118 | 192.168.1.118 | vpn | WireGuard |
 
 `192.168.1.110` is the Proxmox host and `192.168.1.117` is remote-dev, so VMID 117 is not used for a guest.
 
+Every guest also runs Alloy, the supervision agent ([Observability](observability.md)). `ansible/inventory/hosts.yml` repeats each guest's `vmid`: it labels the guest's metrics, logs and probes.
+
 ## Playbooks
 
-`ansible/playbooks/site.yml` imports the others in this order: baseline, dns, vpn, docker, garage, identity, observability, docker-host, edge. Each playbook can also run alone, usually with `--tags`.
+`ansible/playbooks/site.yml` imports the others in this order: baseline, dns, vpn, docker, garage, identity, observability, docker-host, edge, supervision. Each playbook can also run alone, usually with `--tags`.
 
 ## Service pages
 

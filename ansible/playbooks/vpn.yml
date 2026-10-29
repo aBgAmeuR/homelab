@@ -6,5 +6,4 @@
   tags: [vpn, wireguard]
   roles:
     - baseline
-    - node_exporter
     - wireguard

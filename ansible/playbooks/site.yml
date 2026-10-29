@@ -25,3 +25,6 @@
 
 - name: Reverse proxy
   ansible.builtin.import_playbook: edge.yml
+
+- name: Supervision
+  ansible.builtin.import_playbook: supervision.yml

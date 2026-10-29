@@ -1,0 +1,56 @@
+---
+# renovate: datasource=github-releases depName=grafana/alloy extractVersion=^v(?<version>.+)$
+alloy_version: "1.21.3"
+alloy_download_url: "https://github.com/grafana/alloy/releases/download/v{{ alloy_version }}/alloy-{{ alloy_version }}-1.amd64.deb"
+alloy_checksum: "sha256:dbbd705de8ab37dec0cbd6361a3fc7e754d6b2854b57ce672a83e6366199ba73"
+alloy_cache: "/var/cache/alloy/alloy-{{ alloy_version }}-1.amd64.deb"
+alloy_config: /etc/alloy/config.alloy
+alloy_env_file: /etc/default/alloy
+alloy_user: alloy
+alloy_http_listen: 127.0.0.1:12345
+# Soft limit for the Go runtime (GOMEMLIMIT). The smallest guests have 512 MB.
+alloy_memory_limit: 160MiB
+
+# Both on CT 111. The guest firewall there opens 9090 and 3100 to the guests.
+alloy_prometheus_url: http://192.168.1.111:9090/api/v1/write
+alloy_loki_url: http://192.168.1.111:3100/loki/api/v1/push
+alloy_scrape_interval: 30s
+alloy_journal_max_age: 12h
+
+# Every series and log line of the guest carries instance and vmid.
+alloy_instance: "{{ inventory_hostname }}"
+alloy_vmid: "{{ vmid }}"
+
+# node-exporter's textfile directory. The wireguard role and the Docker
+# container metrics timer write *.prom files here.
+alloy_textfile_dir: /var/lib/prometheus/node-exporter
+
+# Units reported in node_systemd_unit_state: the services of the guest.
+# alloy.service is always added.
+alloy_systemd_units: []
+
+# Local metric endpoints, pushed with job=<job>, instance=<alloy_instance>.
+# { job, address, path (default /metrics), bearer_token (optional) }
+alloy_scrape_targets: []
+
+# Units that log one JSON object per line. Each listed field is copied into
+# Loki structured metadata, and the journald level label is dropped in favour
+# of the field from the JSON (if listed).
+# { unit, fields: [...] }
+alloy_journal_json_units: []
+
+# Docker hosts: container logs, cAdvisor and a container state textfile.
+alloy_docker: false
+alloy_cadvisor_address: 127.0.0.1:8080
+alloy_docker_metrics_interval: 30s
+# Compose services that already send their logs over OTLP.
+alloy_docker_logs_exclude: []
+
+# Agents that Alloy replaces.
+alloy_legacy_packages:
+  - prometheus-node-exporter
+  - otelcol-contrib
+alloy_legacy_paths:
+  - /etc/otelcol-contrib
+  - /var/lib/otelcol-contrib
+  - /var/cache/otelcol

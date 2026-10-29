@@ -1,0 +1,7 @@
+---
+alloy_systemd_units:
+  - garage.service
+alloy_scrape_targets:
+  - job: garage
+    address: "{{ garage_admin_bind | default('127.0.0.1:3903') }}"
+    bearer_token: "{{ garage_metrics_token }}"

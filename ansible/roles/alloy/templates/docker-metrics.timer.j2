@@ -1,0 +1,10 @@
+[Unit]
+Description=Write Docker container state every {{ alloy_docker_metrics_interval }}
+
+[Timer]
+OnBootSec={{ alloy_docker_metrics_interval }}
+OnUnitActiveSec={{ alloy_docker_metrics_interval }}
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

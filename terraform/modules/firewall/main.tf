@@ -1,4 +1,15 @@
 locals {
+  probe_rules = var.probe_source == "" ? [] : [
+    {
+      type    = "in"
+      action  = "ACCEPT"
+      proto   = "icmp"
+      dport   = ""
+      source  = var.probe_source
+      comment = "Ping from the blackbox probes"
+    }
+  ]
+
   rules = {
     for name, id in var.container_ids :
     name => concat(
@@ -12,6 +23,7 @@ locals {
           comment = "SSH from the LAN"
         }
       ],
+      local.probe_rules,
       lookup(var.extra_rules, name, [])
     )
   }

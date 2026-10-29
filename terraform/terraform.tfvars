@@ -19,7 +19,7 @@ containers = {
   }
   caddy = {
     vmid        = 113, hostname = "caddy", ip_address = "192.168.1.113/24", gateway = "192.168.1.1"
-    cores       = 1, memory = 256, swap = 128, disk_size = 4
+    cores       = 1, memory = 512, swap = 256, disk_size = 8
     template    = "local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst"
     nesting     = true
     description = "Caddy reverse proxy (Managed by Terraform)"
@@ -48,7 +48,7 @@ containers = {
   }
   vpn = {
     vmid        = 118, hostname = "vpn", ip_address = "192.168.1.118/24", gateway = "192.168.1.1"
-    cores       = 1, memory = 256, swap = 128, disk_size = 4
+    cores       = 1, memory = 512, swap = 256, disk_size = 8
     template    = "local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst"
     nesting     = true
     description = "WireGuard (Managed by Terraform)"
@@ -77,6 +77,20 @@ firewall_extra_rules = {
       dport   = "4318"
       source  = "192.168.1.0/24"
       comment = "OTLP HTTP from the LAN"
+    },
+    {
+      type    = "in"
+      action  = "ACCEPT"
+      dport   = "9090"
+      source  = "192.168.1.110,192.168.1.112,192.168.1.113,192.168.1.114,192.168.1.115,192.168.1.116,192.168.1.118"
+      comment = "Prometheus remote write from Alloy on the guests"
+    },
+    {
+      type    = "in"
+      action  = "ACCEPT"
+      dport   = "3100"
+      source  = "192.168.1.110,192.168.1.112,192.168.1.113,192.168.1.114,192.168.1.115,192.168.1.116,192.168.1.118"
+      comment = "Loki push from Alloy on the guests"
     },
   ]
 
@@ -132,20 +146,6 @@ firewall_extra_rules = {
       source  = "192.168.1.113"
       comment = "AFFiNE from Caddy"
     },
-    {
-      type    = "in"
-      action  = "ACCEPT"
-      dport   = "9100"
-      source  = "192.168.1.111"
-      comment = "node-exporter from Prometheus"
-    },
-    {
-      type    = "in"
-      action  = "ACCEPT"
-      dport   = "8080"
-      source  = "192.168.1.111"
-      comment = "cAdvisor from Prometheus"
-    },
   ]
 
   dns = [
@@ -171,13 +171,6 @@ firewall_extra_rules = {
       dport   = "67"
       comment = "DHCP requests (broadcast from 0.0.0.0)"
     },
-    {
-      type    = "in"
-      action  = "ACCEPT"
-      dport   = "4000"
-      source  = "192.168.1.111"
-      comment = "Blocky metrics from Prometheus"
-    },
   ]
 
   vpn = [
@@ -187,13 +180,6 @@ firewall_extra_rules = {
       proto   = "udp"
       dport   = "16082"
       comment = "WireGuard from the internet (box port forward)"
-    },
-    {
-      type    = "in"
-      action  = "ACCEPT"
-      dport   = "9100"
-      source  = "192.168.1.111"
-      comment = "node-exporter from Prometheus"
     },
   ]
 }

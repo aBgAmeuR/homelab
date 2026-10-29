@@ -124,7 +124,7 @@
     compose_data_owners: {}
     compose_remove_files: []
     compose_templates: []
-    compose_health_url: http://127.0.0.1:9100/metrics
+    compose_health_url: http://127.0.0.1:8080/healthz
   roles:
     - compose
 

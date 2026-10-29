@@ -1,0 +1,45 @@
+{#- What the homelab is made of, from the inventory: guests, their services
+    and metric jobs, and the Caddy sites. Read by Jarvis; no secrets here. -#}
+{%- set proxy = groups['reverse_proxies'] | first -%}
+{%- set by_ip = {} -%}
+{%- for host in groups['all'] -%}
+{%- set _ = by_ip.update({hostvars[host].ansible_host: host}) -%}
+{%- endfor -%}
+{%- set guests = [] -%}
+{%- for host in groups['all'] | sort -%}
+{%- set hv = hostvars[host] -%}
+{%- set docker = hv.alloy_docker | default(false) -%}
+{%- set _ = guests.append({
+      'name': host,
+      'vmid': hv.vmid | int,
+      'address': hv.ansible_host,
+      'description': hv.guest_description | default(''),
+      'groups': hv.group_names | sort,
+      'units': ((hv.alloy_systemd_units | default([])) + ['alloy.service']) | unique,
+      'docker': docker,
+      'metric_jobs': ['node']
+        + (hv.alloy_scrape_targets | default([]) | map(attribute='job') | list)
+        + (['cadvisor'] if docker else []),
+    }) -%}
+{%- endfor -%}
+{%- set sites = [] -%}
+{%- for site in hostvars[proxy].caddy_sites -%}
+{%- set ip = site.upstream | regex_replace('^https?://', '') | regex_replace(':[0-9]+$', '') -%}
+{%- set owner = by_ip.get(ip) -%}
+{%- set _ = sites.append({
+      'host': site.host,
+      'url': 'https://' ~ site.host,
+      'health_path': site.health_path,
+      'upstream': site.upstream,
+      'guest': owner,
+      'vmid': (hostvars[owner].vmid | int) if owner else none,
+      'forward_auth': site.forward_auth | default(false),
+    }) -%}
+{%- endfor -%}
+{{ {
+     'version': 1,
+     'domain': lab_domain,
+     'node': monitoring_pve_node,
+     'guests': guests,
+     'sites': sites,
+   } | to_nice_json(indent=2) }}

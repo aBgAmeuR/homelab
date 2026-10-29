@@ -1,0 +1,7 @@
+[Unit]
+Description=Docker container state for the Alloy textfile collector
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/docker-metrics {{ alloy_textfile_dir }}/docker.prom

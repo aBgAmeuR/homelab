@@ -1,0 +1,3 @@
+---
+alloy_docker_logs_exclude:
+  - harmony

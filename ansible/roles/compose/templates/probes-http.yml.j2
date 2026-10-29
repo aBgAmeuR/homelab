@@ -1,0 +1,22 @@
+# Managed by Ansible: every Caddy site on its health path. instance and vmid
+# are the guest behind the site (its upstream).
+{% set proxy = groups['reverse_proxies'] | first %}
+{% set by_ip = {} %}
+{% for host in groups['all'] %}
+{% set _ = by_ip.update({hostvars[host].ansible_host: host}) %}
+{% endfor %}
+{% for site in hostvars[proxy].caddy_sites %}
+{% set ip = site.upstream | regex_replace('^https?://', '') | regex_replace(':[0-9]+$', '') %}
+{% set owner = by_ip.get(ip) %}
+- targets: ["https://{{ site.host }}{{ site.health_path }}"]
+  labels:
+    site: {{ site.host }}
+{% if owner %}
+    instance: {{ owner }}
+    vmid: "{{ hostvars[owner].vmid }}"
+{% elif ip == monitoring_pve_node.address %}
+    instance: {{ monitoring_pve_node.name }}
+{% else %}
+    instance: {{ ip }}
+{% endif %}
+{% endfor %}

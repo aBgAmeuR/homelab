@@ -1,0 +1,9 @@
+---
+- name: Supervision agent
+  hosts: all
+  become: true
+  gather_facts: true
+  tags: [supervision, alloy]
+  roles:
+    - baseline
+    - alloy

@@ -11,7 +11,7 @@ CT 118 (`192.168.1.118`) runs WireGuard with `wg-quick@wg0`. There is no web UI:
 
 Tunnel traffic leaves CT 118 masqueraded to `192.168.1.118`, because the box has no route to `10.0.0.0/24`. The nftables table `ip wg0` is loaded by `wg-quick` on start and removed on stop. Whether a client sends all its traffic or only the LAN is its own `AllowedIPs`.
 
-The guest firewall opens `16082` UDP from any source and `9100` (node-exporter) to Prometheus (`192.168.1.111`) only.
+The guest firewall opens `16082` UDP from any source. Metrics leave with Alloy, so no metrics port is open.
 
 ## Add a peer
 
@@ -35,7 +35,7 @@ Delete its line from `wireguard_peers` and run the playbook again.
 
 ## Observability
 
-- Metrics: node-exporter (Debian package) on `:9100`, Prometheus job `node`, `instance="vpn"`. A timer runs `wireguard-metrics` every 15 s and writes `wg show all dump` to the textfile collector: `wireguard_peer_last_handshake_seconds`, `wireguard_peer_receive_bytes_total` and `wireguard_peer_transmit_bytes_total`, labelled with the peer name from Ansible.
+- Metrics: Alloy on CT 118 pushes host metrics as job `node`, `instance="vpn"`. A timer runs `wireguard-metrics` every 15 s and writes `wg show all dump` to the textfile collector: `wireguard_peer_last_handshake_seconds`, `wireguard_peer_receive_bytes_total` and `wireguard_peer_transmit_bytes_total`, labelled with the peer name from Ansible. `wg-quick@wg0` and the timer are the guest's services in the **Guests** dashboard.
 - Dashboard **WireGuard**: tunnel state, connected peers (handshake in the last 3 minutes), traffic per peer, last handshake. Host metrics are in **Node Exporter Full**.
 - No logs: kernel WireGuard writes nothing to the journal.
 
@@ -43,7 +43,5 @@ Delete its line from `wireguard_peers` and run the playbook again.
 
 ```bash
 ssh root@192.168.1.118 wg show
-curl -s http://192.168.1.118:9100/metrics | grep ^wireguard_
+ssh root@192.168.1.118 cat /var/lib/prometheus/node-exporter/wireguard.prom
 ```
-
-The second command works from CT 111 only.

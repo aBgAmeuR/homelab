@@ -26,8 +26,24 @@ dnsmasq_dhcp_dns_servers:
   - 192.168.1.116
   - 1.1.1.1
 
-# Blocky's JSON log (query log included) to Loki through the collector on CT 111.
-otelcol_journald_units:
+alloy_systemd_units:
+  - blocky.service
+  - dnsmasq.service
+alloy_scrape_targets:
+  - job: blocky
+    address: "127.0.0.1:{{ blocky_http_port | default(4000) }}"
+alloy_journal_json_units:
   - unit: blocky.service
-    service_name: blocky
-    json: true
+    fields:
+      - level
+      - msg
+      - prefix
+      - client_ip
+      - client_names
+      - question_name
+      - question_type
+      - response_type
+      - response_reason
+      - response_code
+      - duration_ms
+      - answer

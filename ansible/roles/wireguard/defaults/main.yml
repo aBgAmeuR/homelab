@@ -14,6 +14,6 @@ wireguard_wan_interface: eth0
 # client's tunnel IP, without prefix.
 wireguard_peers: []
 
-# Peer metrics for node-exporter's textfile collector.
-wireguard_metrics_dir: "{{ node_exporter_textfile_dir | default('/var/lib/prometheus/node-exporter') }}"
+# Peer metrics for the textfile collector (Alloy's built-in node-exporter).
+wireguard_metrics_dir: "{{ alloy_textfile_dir | default('/var/lib/prometheus/node-exporter') }}"
 wireguard_metrics_interval: 15s

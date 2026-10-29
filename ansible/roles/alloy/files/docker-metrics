@@ -1,0 +1,47 @@
+#!/bin/bash
+# Writes the state of every Docker container as Prometheus metrics for the
+# textfile collector. cAdvisor has resources but not the healthcheck status.
+# Usage: docker-metrics OUTPUT_FILE
+set -euo pipefail
+
+out="$1"
+tmp="$(mktemp "${out}.XXXXXX")"
+trap 'rm -f "$tmp"' EXIT
+
+docker ps --all --no-trunc \
+  --format '{{.Names}}	{{.State}}	{{.Status}}	{{.Label "com.docker.compose.project"}}	{{.Label "com.docker.compose.service"}}' |
+awk -F '\t' '
+function esc(s) { gsub(/\\/, "\\\\", s); gsub(/"/, "\\\"", s); return s }
+{
+  state = $2; status = $3
+  health = "none"
+  if (status ~ /\(healthy\)/) health = "healthy"
+  else if (status ~ /\(unhealthy\)/) health = "unhealthy"
+  else if (status ~ /\(health: starting\)/) health = "starting"
+
+  # "Exited (0) 2 weeks ago": one-shot jobs such as migrations end with 0.
+  code = ""
+  if (match(status, /^Exited \(-?[0-9]+\)/)) code = substr(status, 9, RLENGTH - 9)
+
+  ok = 0
+  if (state == "running" && health != "unhealthy") ok = 1
+  if (state == "exited" && code == "0") ok = 1
+
+  n++
+  labels[n] = sprintf("container=\"%s\",compose_project=\"%s\",compose_service=\"%s\"", esc($1), esc($4), esc($5))
+  info[n] = sprintf("state=\"%s\",health=\"%s\"", esc(state), health)
+  oks[n] = ok
+}
+END {
+  print "# HELP docker_container_info Container state and healthcheck status from docker ps, always 1."
+  print "# TYPE docker_container_info gauge"
+  for (i = 1; i <= n; i++) print "docker_container_info{" labels[i] "," info[i] "} 1"
+  print "# HELP docker_container_ok 1 if the container runs and is not unhealthy, or exited with code 0."
+  print "# TYPE docker_container_ok gauge"
+  for (i = 1; i <= n; i++) print "docker_container_ok{" labels[i] "} " oks[i]
+}' > "$tmp"
+
+# mktemp creates 0600; Alloy runs as alloy.
+chmod 0644 "$tmp"
+mv "$tmp" "$out"
+trap - EXIT

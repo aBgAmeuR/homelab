@@ -11,6 +11,8 @@ compose_data_owners:
 compose_remove_files:
   - grafana.env.example
   - pve-exporter.yml.example
+  - targets/nodes.yml
+  - targets/cadvisor.yml
 compose_templates:
   - src: grafana.env.j2
     dest: grafana.env
@@ -18,28 +20,28 @@ compose_templates:
   - src: pve-exporter.yml.j2
     dest: pve-exporter.yml
     mode: "0644"
-  - src: targets-nodes.yml.j2
-    dest: targets/nodes.yml
+  - src: blackbox.yml.j2
+    dest: blackbox.yml
     mode: "0644"
-  - src: targets-cadvisor.yml.j2
-    dest: targets/cadvisor.yml
+  - src: probes-icmp.yml.j2
+    dest: targets/probes-icmp.yml
+    mode: "0644"
+  - src: probes-http.yml.j2
+    dest: targets/probes-http.yml
+    mode: "0644"
+  - src: probes-dns.yml.j2
+    dest: targets/probes-dns.yml
+    mode: "0644"
+  - src: catalog.json.j2
+    dest: catalog.json
     mode: "0644"
 compose_health_url: http://127.0.0.1:3000/api/health
 
 monitoring_grafana_admin_user: admin
 monitoring_grafana_oauth_issuer: "https://auth.{{ lab_domain }}"
-monitoring_node_targets:
-  - address: node-exporter:9100
-    instance: monitoring
-  - address: 192.168.1.115:9100
-    instance: docker
-  - address: 192.168.1.118:9100
-    instance: vpn
-monitoring_cadvisor_targets:
-  - address: cadvisor:8080
-    instance: monitoring
-  - address: 192.168.1.115:8080
-    instance: docker
+monitoring_pve_node:
+  name: pve
+  address: 192.168.1.110
 monitoring_pve_user: monitoring@pve
 monitoring_pve_token_name: prometheus
 monitoring_pve_verify_ssl: false
