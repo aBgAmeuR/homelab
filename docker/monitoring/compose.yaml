@@ -33,6 +33,7 @@ services:
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=90d
       - --web.enable-otlp-receiver
       - --web.enable-remote-write-receiver
     volumes:
@@ -42,6 +43,18 @@ services:
       - /var/lib/monitoring/prometheus:/prometheus
     ports:
       - "192.168.1.111:9090:9090"
+
+  alertmanager:
+    restart: unless-stopped
+    image: prom/alertmanager:v0.34.2
+    user: "65534"
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --cluster.listen-address=
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - /var/lib/monitoring/alertmanager:/alertmanager
 
   loki:
     restart: unless-stopped

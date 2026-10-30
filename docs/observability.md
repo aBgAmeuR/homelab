@@ -97,6 +97,41 @@ Probe targets are generated from the inventory (`roles/compose/templates/probes-
 
 `vmid:health_component:bool{component=…}` holds each one and `vmid:health:min` the lowest. A guest only has the components that apply to it. Guests that do not start at boot (the stopped legacy CTs) have none. Availability over a period is `avg_over_time(vmid:health:min[30d])`.
 
+## Alerting
+
+Prometheus evaluates the rules in `docker/monitoring/rules/alerts.yml` and sends firing alerts to Alertmanager, in the same Compose project. Alertmanager has no receiver: nothing leaves the stack. It groups alerts by `alertname` and `vmid`, applies the inhibitions and holds the silences. Alerts are read in Grafana (**Alerting**, Alertmanager datasource) and, later, in Jarvis through the Alertmanager API. Alertmanager publishes no port.
+
+| Severity | Meaning |
+| --- | --- |
+| `critical` | Something is down or about to break: a guest, a unit, a container, a probe, a disk |
+| `warning` | Something degrades or needs a look: space, memory, temperature, SMART counters, a blind agent, a missing backup |
+| `none` | `Watchdog` only. It always fires; if it is missing from Alertmanager, rules or delivery are broken |
+
+| Group | Alerts |
+| --- | --- |
+| `guests` | `GuestDown`, `AgentSilent`, `ServiceDown`, `ContainerUnhealthy`, `EndpointDown` (critical for pve-exporter, which `GuestDown` depends on), `GuestMemoryHigh`, `OomKill` |
+| `availability` | `ProbeFailed`, `CertificateExpiring` (warning under 14 days, critical under 7) |
+| `storage` | `FilesystemAlmostFull` (20% and 10% free), `FilesystemFillingUp` (full within 24 hours), `ProxmoxStorageAlmostFull` (80% and 90%), `GuestNotBackedUp` (guests that start at boot) |
+| `host` | `ZpoolUnhealthy`, `DiskFailing`, `DiskDegrading` (one alert per SMART `attribute`), `HardwareTemperatureHigh` (sensor max and crit; maxima above 150 °C are ignored as bogus), `DiskTemperatureHigh` (50 °C for a hard disk, 70 °C for an SSD) |
+| `apps` | `BlockyBlockingDisabled`, `BlockyListsStale` |
+| `meta` | `Watchdog`, `RuleEvaluationFailures` |
+
+Updates and pending reboots raise no alert: they belong to the Maintenance view.
+
+Fewer alerts for one cause:
+
+- `GuestDown` inhibits every other alert with the same `vmid`.
+- A critical alert inhibits the warning with the same name and target (`CertificateExpiring`, `FilesystemAlmostFull`, …).
+- HTTPS probes carry `proxy_vmid`, the guest of the reverse proxy. `ProbeFailed` skips them while that guest is stopped or one of its units is down, so a Caddy outage shows as one `ServiceDown`, not five failed sites.
+
+Silences: in Grafana, **Alerting → Silences**, with the Alertmanager datasource selected. They survive restarts (`/var/lib/monitoring/alertmanager`).
+
+History: Prometheus keeps 90 days. The `ALERTS{alertstate="firing"}` series gives every firing period over that time.
+
+Checks: `task check:alerting` runs `promtool` on the Prometheus config and the rules, the rule unit tests in `tests/prometheus/`, and `amtool check-config`. It needs `promtool` and `amtool` on the `PATH`, at the versions of the images in `compose.yaml`.
+
+Deploy: `task ansible -- playbooks/observability.yml`.
+
 ## Catalog
 
 The `compose` role also writes `/opt/monitoring/catalog.json`: the Proxmox node, every guest (vmid, address, description, groups, units, metric jobs, Docker or not) and every Caddy site with the guest behind it. It is generated from the inventory and holds no secret. Nothing mounts it yet; it is meant for Jarvis.

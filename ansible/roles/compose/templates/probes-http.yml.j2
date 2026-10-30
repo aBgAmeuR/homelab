@@ -9,6 +9,7 @@
 - targets: ["https://{{ site.host }}{{ site.health_path }}"]
   labels:
     site: {{ site.host }}
+    proxy_vmid: "{{ hostvars[proxy].vmid }}"
 {% if owner %}
     instance: {{ owner }}
     vmid: "{{ hostvars[owner].vmid }}"

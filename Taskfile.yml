@@ -48,6 +48,14 @@ tasks:
       - task: ansible
         vars: { CLI_ARGS: --syntax-check playbooks/site.yml }
 
+  check:alerting:
+    desc: promtool and amtool checks of the Prometheus config, rules and rule tests, and the Alertmanager config
+    cmds:
+      - promtool check config --syntax-only docker/monitoring/prometheus.yml
+      - promtool check rules docker/monitoring/rules/*.yml
+      - promtool test rules tests/prometheus/*.test.yml
+      - amtool check-config docker/monitoring/alertmanager.yml
+
   tf:
     internal: true
     silent: true

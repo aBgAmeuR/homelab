@@ -34,7 +34,7 @@ flowchart LR
 | Configuration | Ansible |
 | Secrets | SOPS + age |
 | Edge | Caddy, TinyAuth (OIDC + forward-auth), lldap, WireGuard |
-| Observability | Grafana, Prometheus, Loki, Tempo, Pyroscope, OpenTelemetry Collector, blackbox exporter, Grafana Alloy on every guest |
+| Observability | Grafana, Prometheus, Alertmanager, Loki, Tempo, Pyroscope, OpenTelemetry Collector, blackbox exporter, Grafana Alloy on every guest |
 | Workloads | Docker Compose, Renovate |
 
 ## Design choices
@@ -81,7 +81,7 @@ docs/                      documentation
 | [Auth](docs/auth.md) | lldap, TinyAuth, Proxmox OpenID realm |
 | [DNS and DHCP](docs/dns.md) | Blocky, dnsmasq, local records |
 | [VPN](docs/vpn.md) | WireGuard, peers |
-| [Observability](docs/observability.md) | Alloy agent, signals, guest health, dashboards, Harmony telemetry |
+| [Observability](docs/observability.md) | Alloy agent, signals, guest health, alerting, dashboards, Harmony telemetry |
 | [Harmony](docs/harmony.md) | App, Cloudflare tunnel, image updates |
 | [AFFiNE](docs/affine.md) | App, OIDC login, deploy order |
 | [Filestash](docs/filestash.md) | App, forward-auth, managed config |

@@ -1,0 +1,360 @@
+groups:
+  - name: guests
+    rules:
+      - alert: GuestDown
+        expr: |
+          (max by (vmid) (vmid:health_component:bool{component="running"}) == 0)
+            * on (vmid) group_left (name)
+          max by (vmid, name) (pve_guest_info)
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Guest {{ $labels.vmid }} ({{ $labels.name }}) is not running"
+          description: "Proxmox reports guest {{ $labels.vmid }} stopped, although it starts at boot."
+
+      - alert: AgentSilent
+        expr: |
+          (max by (vmid) (vmid:health_component:bool{component="agent"}) == 0)
+            * on (vmid) group_left (name)
+          max by (vmid, name) (pve_guest_info)
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Alloy on guest {{ $labels.vmid }} ({{ $labels.name }}) sends nothing"
+          description: "The guest answers ping, but no host scrape has arrived from Alloy for 5 minutes. Its services, containers and logs are not watched."
+
+      - alert: ServiceDown
+        expr: max without (job, state, type) (node_systemd_unit_state{job="node", state="active"}) == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.name }} is not active on {{ $labels.instance }}"
+          description: "systemd reports {{ $labels.name }} on {{ $labels.instance }} as not active for 2 minutes."
+
+      - alert: ContainerUnhealthy
+        expr: max without (job) (docker_container_ok) == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Container {{ $labels.container }} is failing on {{ $labels.instance }}"
+          description: "{{ $labels.container }} ({{ $labels.compose_project }}/{{ $labels.compose_service }}) is stopped with an error or reports unhealthy."
+
+      - alert: EndpointDown
+        expr: up{job="pve"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "pve-exporter cannot read the Proxmox API"
+          description: "Guest state, resources and backups come from pve-exporter. Until it answers, GuestDown cannot fire."
+
+      - alert: EndpointDown
+        expr: up{job!~"node|pve|probe_.+"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Metrics endpoint {{ $labels.job }} on {{ $labels.instance }} is down"
+          description: "The {{ $labels.job }} scrape on {{ $labels.instance }} has failed for 5 minutes."
+
+      - alert: GuestMemoryHigh
+        expr: |
+          (pve_memory_usage_bytes{id=~"(lxc|qemu)/.+"} / pve_memory_size_bytes > 0.9)
+            * on (vmid) group_left (name)
+          max by (vmid, name) (pve_guest_info)
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Guest {{ $labels.vmid }} ({{ $labels.name }}) uses {{ $value | humanizePercentage }} of its memory"
+          description: "Memory use seen by Proxmox has stayed above 90% of the guest's limit for 15 minutes."
+
+      - alert: OomKill
+        expr: increase(node_vmstat_oom_kill{job="node", vmid=""}[15m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "The kernel killed a process for lack of memory"
+          description: "The counter is host-wide; the guest logs tell which process was killed."
+
+  - name: availability
+    rules:
+      - alert: ProbeFailed
+        expr: |
+          probe_success{job=~"probe_icmp|probe_dns"} == 0
+            or
+          (
+            probe_success{job="probe_http"} == 0
+              unless on (proxy_vmid)
+            label_replace(
+              min by (vmid) (vmid:health_component:bool{component=~"running|services"}) == 0,
+              "proxy_vmid", "$1", "vmid", "(.+)"
+            )
+          )
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Probe {{ $labels.job }} to {{ $labels.target }} fails"
+          description: "The blackbox probe to {{ $labels.target }} ({{ $labels.instance }}) has failed for 2 minutes. HTTPS probes are left out while the reverse proxy itself is down."
+
+      - alert: CertificateExpiring
+        expr: (probe_ssl_earliest_cert_expiry - time()) / 86400 < 14
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "Certificate for {{ $labels.site }} expires in {{ $value | printf \"%.0f\" }} days"
+          description: "Caddy renews about 30 days before expiry, so the renewal for {{ $labels.site }} has failed."
+
+      - alert: CertificateExpiring
+        expr: (probe_ssl_earliest_cert_expiry - time()) / 86400 < 7
+        for: 1h
+        labels:
+          severity: critical
+        annotations:
+          summary: "Certificate for {{ $labels.site }} expires in {{ $value | printf \"%.0f\" }} days"
+          description: "Caddy renews about 30 days before expiry, so the renewal for {{ $labels.site }} has failed."
+
+  - name: storage
+    rules:
+      - alert: FilesystemAlmostFull
+        expr: |
+          node_filesystem_avail_bytes{fstype!~"tmpfs|ramfs|fuse.*|overlay|squashfs|nsfs"}
+            / node_filesystem_size_bytes < 0.2
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.mountpoint }} on {{ $labels.instance }} has {{ $value | humanizePercentage }} free"
+          description: "Less than 20% of {{ $labels.mountpoint }} is free."
+
+      - alert: FilesystemAlmostFull
+        expr: |
+          node_filesystem_avail_bytes{fstype!~"tmpfs|ramfs|fuse.*|overlay|squashfs|nsfs"}
+            / node_filesystem_size_bytes < 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.mountpoint }} on {{ $labels.instance }} has {{ $value | humanizePercentage }} free"
+          description: "Less than 10% of {{ $labels.mountpoint }} is free."
+
+      - alert: FilesystemFillingUp
+        expr: |
+          predict_linear(node_filesystem_avail_bytes{fstype!~"tmpfs|ramfs|fuse.*|overlay|squashfs|nsfs"}[6h], 86400) < 0
+            and
+          node_filesystem_avail_bytes{fstype!~"tmpfs|ramfs|fuse.*|overlay|squashfs|nsfs"}
+            / node_filesystem_size_bytes < 0.4
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.mountpoint }} on {{ $labels.instance }} will be full within 24 hours"
+          description: "At the rate of the last 6 hours, {{ $labels.mountpoint }} runs out of space within a day."
+
+      - alert: ProxmoxStorageAlmostFull
+        expr: pve_disk_usage_bytes{id=~"storage/.+"} / pve_disk_size_bytes > 0.8
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Proxmox storage {{ $labels.id }} is {{ $value | humanizePercentage }} full"
+          description: "More than 80% of {{ $labels.id }} is used."
+
+      - alert: ProxmoxStorageAlmostFull
+        expr: pve_disk_usage_bytes{id=~"storage/.+"} / pve_disk_size_bytes > 0.9
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Proxmox storage {{ $labels.id }} is {{ $value | humanizePercentage }} full"
+          description: "More than 90% of {{ $labels.id }} is used."
+
+      - alert: GuestNotBackedUp
+        expr: |
+          (pve_not_backed_up_info and on (vmid) (pve_onboot_status == 1))
+            * on (vmid) group_left (name)
+          max by (vmid, name) (pve_guest_info)
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "Guest {{ $labels.vmid }} ({{ $labels.name }}) has no backup job"
+          description: "No Proxmox backup job covers guest {{ $labels.vmid }}."
+
+  - name: host
+    rules:
+      - alert: ZpoolUnhealthy
+        expr: node_zfs_zpool_state{state!="online"} > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "ZFS pool {{ $labels.zpool }} is {{ $labels.state }}"
+          description: "Run zpool status {{ $labels.zpool }} on {{ $labels.instance }}."
+
+      - alert: DiskFailing
+        expr: |
+          (smart_health_passed == 0)
+            * on (instance, device) group_left (model, serial)
+          smart_device_info
+        labels:
+          severity: critical
+          attribute: health
+        annotations:
+          summary: "SMART self-assessment failed on {{ $labels.device }} ({{ $labels.model }})"
+          description: "Replace disk {{ $labels.serial }}."
+
+      - alert: DiskFailing
+        expr: |
+          (smart_nvme_critical_warning > 0)
+            * on (instance, device) group_left (model, serial)
+          smart_device_info
+        labels:
+          severity: critical
+          attribute: nvme_critical_warning
+        annotations:
+          summary: "NVMe critical warning on {{ $labels.device }} ({{ $labels.model }})"
+          description: "The controller reports critical warning bits {{ $value }}. Check smartctl -a {{ $labels.device }}."
+
+      - alert: DiskDegrading
+        expr: smart_ata_pending_sectors > 0
+        labels:
+          severity: warning
+          attribute: pending_sectors
+        annotations:
+          summary: "{{ $value }} pending sectors on {{ $labels.device }}"
+          description: "Sectors wait to be remapped on {{ $labels.device }}."
+
+      - alert: DiskDegrading
+        expr: smart_ata_offline_uncorrectable > 0
+        labels:
+          severity: warning
+          attribute: offline_uncorrectable
+        annotations:
+          summary: "{{ $value }} uncorrectable sectors on {{ $labels.device }}"
+          description: "The offline scan found sectors it could not read on {{ $labels.device }}."
+
+      - alert: DiskDegrading
+        expr: delta(smart_ata_reallocated_sectors[1d]) > 0
+        labels:
+          severity: warning
+          attribute: reallocated_sectors
+        annotations:
+          summary: "{{ $labels.device }} reallocated sectors in the last day"
+          description: "The reallocated sector count of {{ $labels.device }} grew by {{ $value }}."
+
+      - alert: DiskDegrading
+        expr: delta(smart_ata_udma_crc_errors[1d]) > 0
+        labels:
+          severity: warning
+          attribute: udma_crc_errors
+        annotations:
+          summary: "Link errors on {{ $labels.device }} in the last day"
+          description: "UDMA CRC errors usually point to the cable or the port, not the disk."
+
+      - alert: DiskDegrading
+        expr: smart_nvme_percentage_used >= 80
+        labels:
+          severity: warning
+          attribute: nvme_wear
+        annotations:
+          summary: "{{ $labels.device }} has used {{ $value }}% of its rated life"
+          description: "Plan a replacement for {{ $labels.device }}."
+
+      - alert: DiskDegrading
+        expr: smart_nvme_available_spare_percent <= smart_nvme_available_spare_threshold_percent
+        labels:
+          severity: warning
+          attribute: nvme_spare
+        annotations:
+          summary: "{{ $labels.device }} is out of spare blocks"
+          description: "Available spare is at or below the vendor threshold."
+
+      - alert: DiskDegrading
+        expr: delta(smart_nvme_media_errors[1d]) > 0
+        labels:
+          severity: warning
+          attribute: nvme_media_errors
+        annotations:
+          summary: "Media errors on {{ $labels.device }} in the last day"
+          description: "The controller could not recover {{ $value }} reads or writes."
+
+      - alert: HardwareTemperatureHigh
+        expr: |
+          node_hwmon_temp_celsius
+            >= on (instance, chip, sensor)
+          (node_hwmon_temp_max_celsius < 150)
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.chip }} {{ $labels.sensor }} is at {{ $value }} °C"
+          description: "The sensor has stayed at or above its maximum for 10 minutes."
+
+      - alert: HardwareTemperatureHigh
+        expr: |
+          node_hwmon_temp_celsius
+            >= on (instance, chip, sensor)
+          (node_hwmon_temp_crit_celsius < 150)
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.chip }} {{ $labels.sensor }} is at {{ $value }} °C"
+          description: "The sensor has reached its critical temperature."
+
+      - alert: DiskTemperatureHigh
+        expr: |
+          (smart_temperature_celsius > 50 and on (instance, device) smart_device_info{rotational="1"})
+            or
+          (smart_temperature_celsius > 70 and on (instance, device) smart_device_info{rotational="0"})
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.device }} is at {{ $value }} °C"
+          description: "Above 50 °C for a hard disk or 70 °C for an SSD, for 15 minutes."
+
+  - name: apps
+    rules:
+      - alert: BlockyBlockingDisabled
+        expr: blocky_blocking_enabled == 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Blocky is not blocking"
+          description: "Ad and tracker blocking has been off for 15 minutes."
+
+      - alert: BlockyListsStale
+        expr: time() - blocky_last_list_group_refresh_timestamp_seconds > 86400
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "Blocky lists are {{ $value | humanizeDuration }} old"
+          description: "Blocky has not refreshed its block lists for more than a day."
+
+  - name: meta
+    rules:
+      - alert: Watchdog
+        expr: vector(1)
+        labels:
+          severity: none
+        annotations:
+          summary: "The alerting pipeline works"
+          description: "Always firing. If it is missing from Alertmanager, rules or delivery are broken."
+
+      - alert: RuleEvaluationFailures
+        expr: increase(prometheus_rule_evaluation_failures_total[15m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "Rule group {{ $labels.rule_group }} fails to evaluate"
+          description: "Check the Prometheus log for the failing expression."

@@ -8,6 +8,7 @@ compose_data_owners:
   loki: "10001"
   tempo: "10001"
   pyroscope: "10001"
+  alertmanager: "65534"
 compose_remove_files:
   - targets/nodes.yml
   - targets/cadvisor.yml

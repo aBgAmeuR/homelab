@@ -1,0 +1,297 @@
+rule_files:
+  - ../../docker/monitoring/rules/supervision.yml
+  - ../../docker/monitoring/rules/alerts.yml
+
+evaluation_interval: 30s
+
+tests:
+  - name: a stopped guest alerts only when it starts at boot
+    interval: 30s
+    input_series:
+      - series: 'pve_up{id="lxc/116", vmid="116"}'
+        values: "1 1 0x20"
+      - series: 'pve_onboot_status{id="lxc/116", vmid="116"}'
+        values: "1x22"
+      - series: 'pve_guest_info{id="lxc/116", vmid="116", name="dns"}'
+        values: "1x22"
+      - series: 'pve_up{id="lxc/100", vmid="100"}'
+        values: "0x22"
+      - series: 'pve_onboot_status{id="lxc/100", vmid="100"}'
+        values: "0x22"
+      - series: 'pve_guest_info{id="lxc/100", vmid="100", name="pi-hole"}'
+        values: "1x22"
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: GuestDown
+        exp_alerts: []
+      - eval_time: 4m
+        alertname: GuestDown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              vmid: "116"
+              name: dns
+            exp_annotations:
+              summary: "Guest 116 (dns) is not running"
+              description: "Proxmox reports guest 116 stopped, although it starts at boot."
+
+  - name: a guest whose agent stops pushing is reported
+    interval: 30s
+    input_series:
+      - series: 'up{job="node", instance="garage", vmid="112"}'
+        values: "1 1 _x30"
+      - series: 'probe_success{job="probe_icmp", instance="garage", vmid="112"}'
+        values: "1x32"
+      - series: 'pve_guest_info{id="lxc/112", vmid="112", name="garage"}'
+        values: "1x32"
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: AgentSilent
+        exp_alerts: []
+      - eval_time: 12m
+        alertname: AgentSilent
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              vmid: "112"
+              name: garage
+            exp_annotations:
+              summary: "Alloy on guest 112 (garage) sends nothing"
+              description: "The guest answers ping, but no host scrape has arrived from Alloy for 5 minutes. Its services, containers and logs are not watched."
+
+  - name: a stopped unit is reported with its name
+    interval: 30s
+    input_series:
+      - series: 'node_systemd_unit_state{job="node", instance="dns", vmid="116", name="blocky.service", state="active", type="simple"}'
+        values: "1 1 0x10"
+      - series: 'node_systemd_unit_state{job="node", instance="dns", vmid="116", name="blocky.service", state="failed", type="simple"}'
+        values: "0 0 1x10"
+      - series: 'node_systemd_unit_state{job="node", instance="dns", vmid="116", name="dnsmasq.service", state="active", type="forking"}'
+        values: "1x12"
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: ServiceDown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              instance: dns
+              vmid: "116"
+              name: blocky.service
+            exp_annotations:
+              summary: "blocky.service is not active on dns"
+              description: "systemd reports blocky.service on dns as not active for 2 minutes."
+
+  - name: HTTPS probes stay quiet while the reverse proxy is down
+    interval: 30s
+    input_series:
+      - series: 'pve_up{id="lxc/113", vmid="113"}'
+        values: "1x12"
+      - series: 'pve_onboot_status{id="lxc/113", vmid="113"}'
+        values: "1x12"
+      - series: 'node_systemd_unit_state{job="node", instance="caddy", vmid="113", name="caddy.service", state="active", type="notify"}'
+        values: "0x12"
+      - series: 'probe_success{job="probe_http", instance="docker", vmid="115", site="files.example.org", target="https://files.example.org/healthz", proxy_vmid="113"}'
+        values: "0x12"
+      - series: 'probe_success{job="probe_icmp", instance="vpn", vmid="118", target="192.168.1.118"}'
+        values: "0x12"
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: ProbeFailed
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              job: probe_icmp
+              instance: vpn
+              vmid: "118"
+              target: 192.168.1.118
+            exp_annotations:
+              summary: "Probe probe_icmp to 192.168.1.118 fails"
+              description: "The blackbox probe to 192.168.1.118 (vpn) has failed for 2 minutes. HTTPS probes are left out while the reverse proxy itself is down."
+
+  - name: a failing HTTPS probe alerts when the reverse proxy is healthy
+    interval: 30s
+    input_series:
+      - series: 'pve_up{id="lxc/113", vmid="113"}'
+        values: "1x12"
+      - series: 'pve_onboot_status{id="lxc/113", vmid="113"}'
+        values: "1x12"
+      - series: 'node_systemd_unit_state{job="node", instance="caddy", vmid="113", name="caddy.service", state="active", type="notify"}'
+        values: "1x12"
+      - series: 'probe_success{job="probe_http", instance="docker", vmid="115", site="files.example.org", target="https://files.example.org/healthz", proxy_vmid="113"}'
+        values: "0x12"
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: ProbeFailed
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              job: probe_http
+              instance: docker
+              vmid: "115"
+              site: files.example.org
+              target: https://files.example.org/healthz
+              proxy_vmid: "113"
+            exp_annotations:
+              summary: "Probe probe_http to https://files.example.org/healthz fails"
+              description: "The blackbox probe to https://files.example.org/healthz (docker) has failed for 2 minutes. HTTPS probes are left out while the reverse proxy itself is down."
+
+  - name: certificates warn under 14 days and turn critical under 7
+    interval: 30s
+    input_series:
+      - series: 'probe_ssl_earliest_cert_expiry{job="probe_http", instance="auth", site="auth.example.org"}'
+        values: "864000x300"
+      - series: 'probe_ssl_earliest_cert_expiry{job="probe_http", instance="docker", site="docs.example.org"}'
+        values: "432000x300"
+      - series: 'probe_ssl_earliest_cert_expiry{job="probe_http", instance="pve", site="proxmox.example.org"}'
+        values: "2592000x300"
+    alert_rule_test:
+      - eval_time: 2h
+        alertname: CertificateExpiring
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              job: probe_http
+              instance: auth
+              site: auth.example.org
+            exp_annotations:
+              summary: "Certificate for auth.example.org expires in 10 days"
+              description: "Caddy renews about 30 days before expiry, so the renewal for auth.example.org has failed."
+          - exp_labels:
+              severity: warning
+              job: probe_http
+              instance: docker
+              site: docs.example.org
+            exp_annotations:
+              summary: "Certificate for docs.example.org expires in 5 days"
+              description: "Caddy renews about 30 days before expiry, so the renewal for docs.example.org has failed."
+          - exp_labels:
+              severity: critical
+              job: probe_http
+              instance: docker
+              site: docs.example.org
+            exp_annotations:
+              summary: "Certificate for docs.example.org expires in 5 days"
+              description: "Caddy renews about 30 days before expiry, so the renewal for docs.example.org has failed."
+
+  - name: a full filesystem alerts and tmpfs is ignored
+    interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{job="node", instance="docker", vmid="115", device="/dev/mapper/vm", fstype="ext4", mountpoint="/"}'
+        values: "15x30"
+      - series: 'node_filesystem_size_bytes{job="node", instance="docker", vmid="115", device="/dev/mapper/vm", fstype="ext4", mountpoint="/"}'
+        values: "100x30"
+      - series: 'node_filesystem_avail_bytes{job="node", instance="docker", vmid="115", device="tmpfs", fstype="tmpfs", mountpoint="/run"}'
+        values: "1x30"
+      - series: 'node_filesystem_size_bytes{job="node", instance="docker", vmid="115", device="tmpfs", fstype="tmpfs", mountpoint="/run"}'
+        values: "100x30"
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: FilesystemAlmostFull
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              job: node
+              instance: docker
+              vmid: "115"
+              device: /dev/mapper/vm
+              fstype: ext4
+              mountpoint: /
+            exp_annotations:
+              summary: "/ on docker has 15% free"
+              description: "Less than 20% of / is free."
+
+  - name: two SMART attributes on one disk give two alerts
+    interval: 1m
+    input_series:
+      - series: 'smart_ata_pending_sectors{job="node", instance="pve", device="/dev/sda"}'
+        values: "8x5"
+      - series: 'smart_ata_offline_uncorrectable{job="node", instance="pve", device="/dev/sda"}'
+        values: "3x5"
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: DiskDegrading
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              attribute: pending_sectors
+              job: node
+              instance: pve
+              device: /dev/sda
+            exp_annotations:
+              summary: "8 pending sectors on /dev/sda"
+              description: "Sectors wait to be remapped on /dev/sda."
+          - exp_labels:
+              severity: warning
+              attribute: offline_uncorrectable
+              job: node
+              instance: pve
+              device: /dev/sda
+            exp_annotations:
+              summary: "3 uncorrectable sectors on /dev/sda"
+              description: "The offline scan found sectors it could not read on /dev/sda."
+
+  - name: a sensor with a bogus maximum is ignored
+    interval: 1m
+    input_series:
+      - series: 'node_hwmon_temp_celsius{job="node", instance="pve", chip="nvme_nvme0", sensor="temp2"}'
+        values: "39x15"
+      - series: 'node_hwmon_temp_max_celsius{job="node", instance="pve", chip="nvme_nvme0", sensor="temp2"}'
+        values: "65261.85x15"
+      - series: 'node_hwmon_temp_celsius{job="node", instance="pve", chip="platform_coretemp_0", sensor="temp1"}'
+        values: "85x15"
+      - series: 'node_hwmon_temp_max_celsius{job="node", instance="pve", chip="platform_coretemp_0", sensor="temp1"}'
+        values: "80x15"
+      - series: 'node_hwmon_temp_crit_celsius{job="node", instance="pve", chip="platform_coretemp_0", sensor="temp1"}'
+        values: "100x15"
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: HardwareTemperatureHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              instance: pve
+              chip: platform_coretemp_0
+              sensor: temp1
+            exp_annotations:
+              summary: "platform_coretemp_0 temp1 is at 85 °C"
+              description: "The sensor has stayed at or above its maximum for 10 minutes."
+
+  - name: only guests that start at boot need a backup
+    interval: 1m
+    input_series:
+      - series: 'pve_not_backed_up_info{id="lxc/116", vmid="116"}'
+        values: "1x80"
+      - series: 'pve_onboot_status{id="lxc/116", vmid="116"}'
+        values: "1x80"
+      - series: 'pve_guest_info{id="lxc/116", vmid="116", name="dns"}'
+        values: "1x80"
+      - series: 'pve_not_backed_up_info{id="lxc/100", vmid="100"}'
+        values: "1x80"
+      - series: 'pve_onboot_status{id="lxc/100", vmid="100"}'
+        values: "0x80"
+      - series: 'pve_guest_info{id="lxc/100", vmid="100", name="pi-hole"}'
+        values: "1x80"
+    alert_rule_test:
+      - eval_time: 70m
+        alertname: GuestNotBackedUp
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              id: lxc/116
+              vmid: "116"
+              name: dns
+            exp_annotations:
+              summary: "Guest 116 (dns) has no backup job"
+              description: "No Proxmox backup job covers guest 116."
+
+  - name: the watchdog always fires
+    interval: 1m
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: Watchdog
+        exp_alerts:
+          - exp_labels:
+              severity: none
+            exp_annotations:
+              summary: "The alerting pipeline works"
+              description: "Always firing. If it is missing from Alertmanager, rules or delivery are broken."
