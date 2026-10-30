@@ -38,6 +38,12 @@ connectors:
     exemplars:
       enabled: true
     metrics_flush_interval: 30s
+  servicegraph:
+    latency_histogram_buckets: [5ms, 10ms, 25ms, 50ms, 100ms, 250ms, 500ms, 1s, 2s, 5s, 10s]
+    store:
+      ttl: 10s
+      max_items: 10000
+    metrics_flush_interval: 30s
 
 extensions:
   health_check:
@@ -56,7 +62,7 @@ service:
                 port: 8888
   pipelines:
     metrics:
-      receivers: [otlp, span_metrics]
+      receivers: [otlp, span_metrics, servicegraph]
       processors: [memory_limiter, batch]
       exporters: [otlp_http/metrics]
     logs:
@@ -66,4 +72,4 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [otlp_grpc/traces, span_metrics]
+      exporters: [otlp_grpc/traces, span_metrics, servicegraph]

@@ -1,0 +1,7 @@
+[Unit]
+Description=DHCP lease metrics for the Alloy textfile collector
+After=dnsmasq.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/dnsmasq-leases-metrics {{ dnsmasq_lease_file }} {{ dnsmasq_metrics_dir }}/dnsmasq.prom

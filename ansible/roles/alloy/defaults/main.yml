@@ -19,6 +19,7 @@ alloy_instance: "{{ inventory_hostname }}"
 alloy_vmid: "{{ vmid }}"
 
 alloy_textfile_dir: /var/lib/prometheus/node-exporter
+alloy_apt_metrics_interval: 15min
 
 alloy_systemd_units: []
 

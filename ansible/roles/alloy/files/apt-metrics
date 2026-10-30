@@ -1,0 +1,59 @@
+#!/bin/bash
+set -euo pipefail
+
+out="$1"
+tmp="$(mktemp "${out}.XXXXXX")"
+trap 'rm -f "$tmp"' EXIT
+
+stamp=/var/lib/apt/periodic/update-success-stamp
+if [ -e "$stamp" ]; then
+  cache="$(stat -c %Y "$stamp")"
+else
+  cache="$(stat -c %Y /var/lib/apt/lists)"
+fi
+
+reboot=0
+[ -e /run/reboot-required ] && reboot=1
+
+autoremove="$(apt-get --just-print --quiet autoremove | grep -c '^Remv ' || true)"
+
+apt-get --just-print --quiet dist-upgrade |
+awk -v cache="$cache" -v autoremove="$autoremove" -v reboot="$reboot" '
+function esc(s) { gsub(/\\/, "\\\\", s); gsub(/"/, "\\\"", s); return s }
+# Inst <pkg> [<installed>] (<candidate> <origin>[, <origin>] [<arch>])
+# A package without [<installed>] is a new dependency, not an upgrade.
+/^Inst [^ ]+ \[/ {
+  s = $0
+  s = substr(s, index(s, "(") + 1)
+  if (index(s, ")")) s = substr(s, 1, index(s, ")") - 1)
+  s = substr(s, index(s, " ") + 1)
+  arch = ""
+  if (match(s, / \[[^]]*\]$/)) {
+    arch = substr(s, RSTART + 2, RLENGTH - 3)
+    s = substr(s, 1, RSTART - 1)
+  }
+  gsub(/, /, ",", s)
+  key = sprintf("origin=\"%s\",arch=\"%s\"", esc(s), esc(arch))
+  if (!(key in pending)) order[++n] = key
+  pending[key]++
+}
+END {
+  print "# HELP apt_upgrades_pending Installed packages apt-get dist-upgrade would upgrade, by origin and architecture."
+  print "# TYPE apt_upgrades_pending gauge"
+  if (n == 0) print "apt_upgrades_pending{origin=\"\",arch=\"\"} 0"
+  for (i = 1; i <= n; i++) print "apt_upgrades_pending{" order[i] "} " pending[order[i]]
+  print "# HELP apt_autoremove_pending Packages apt-get autoremove would remove."
+  print "# TYPE apt_autoremove_pending gauge"
+  print "apt_autoremove_pending " autoremove
+  print "# HELP apt_package_cache_timestamp_seconds Unix time of the last successful package list update."
+  print "# TYPE apt_package_cache_timestamp_seconds gauge"
+  print "apt_package_cache_timestamp_seconds " cache
+  print "# HELP node_reboot_required 1 if an installed package asked for a reboot."
+  print "# TYPE node_reboot_required gauge"
+  print "node_reboot_required " reboot
+}' > "$tmp"
+
+# mktemp creates 0600; Alloy runs as alloy.
+chmod 0644 "$tmp"
+mv "$tmp" "$out"
+trap - EXIT

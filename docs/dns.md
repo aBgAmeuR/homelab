@@ -27,6 +27,7 @@ DHCP announces `192.168.1.116` then `1.1.1.1`. A client that picks `1.1.1.1` get
   {service_name="blocky"} | prefix="queryLog" | response_type="BLOCKED"
   ```
 
+- DHCP leases: a timer reads `/var/lib/misc/dnsmasq.leases` every 30 s and writes `dnsmasq_leases` and `dnsmasq_lease_expiry_timestamp_seconds{mac,ip,hostname}` for the Alloy textfile collector. An empty `hostname` means the client sent none.
 - Dashboard **Blocky**: the upstream dashboard (Prometheus) without the API buttons, plus a Loki section with top domains, top blocked domains, slow upstream answers and a filterable query log. Loki keeps 14 days.
 
 ## Add a record or unblock a domain

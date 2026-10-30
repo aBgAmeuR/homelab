@@ -1,0 +1,10 @@
+[Unit]
+Description=Write DHCP lease metrics every {{ dnsmasq_metrics_interval }}
+
+[Timer]
+OnBootSec={{ dnsmasq_metrics_interval }}
+OnUnitActiveSec={{ dnsmasq_metrics_interval }}
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

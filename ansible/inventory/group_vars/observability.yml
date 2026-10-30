@@ -9,8 +9,6 @@ compose_data_owners:
   tempo: "10001"
   pyroscope: "10001"
 compose_remove_files:
-  - grafana.env.example
-  - pve-exporter.yml.example
   - targets/nodes.yml
   - targets/cadvisor.yml
 compose_templates:

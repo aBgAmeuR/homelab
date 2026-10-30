@@ -1,0 +1,7 @@
+[Unit]
+Description=Pending apt upgrades for the Alloy textfile collector
+After=apt-daily.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/apt-metrics {{ alloy_textfile_dir }}/apt.prom

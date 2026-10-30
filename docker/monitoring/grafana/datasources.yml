@@ -40,6 +40,8 @@ datasources:
     jsonData:
       nodeGraph:
         enabled: true
+      serviceMap:
+        datasourceUid: prometheus
       tracesToLogsV2:
         datasourceUid: loki
         spanStartTimeShift: "-5m"

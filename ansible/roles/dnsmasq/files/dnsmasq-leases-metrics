@@ -1,0 +1,31 @@
+#!/bin/bash
+set -euo pipefail
+
+leases="$1"
+out="$2"
+tmp="$(mktemp "${out}.XXXXXX")"
+trap 'rm -f "$tmp"' EXIT
+
+{ [ -r "$leases" ] && cat "$leases" || true; } |
+awk '
+function esc(s) { gsub(/\\/, "\\\\", s); gsub(/"/, "\\\"", s); return s }
+# IPv4 lease lines: expiry mac ip hostname client-id. The duid line has 2 fields.
+NF == 5 {
+  n++
+  host = ($4 == "*") ? "" : $4
+  labels[n] = sprintf("mac=\"%s\",ip=\"%s\",hostname=\"%s\"", esc($2), esc($3), esc(host))
+  expiry[n] = $1
+}
+END {
+  print "# HELP dnsmasq_leases Active DHCP leases in the dnsmasq lease file."
+  print "# TYPE dnsmasq_leases gauge"
+  print "dnsmasq_leases " n + 0
+  print "# HELP dnsmasq_lease_expiry_timestamp_seconds Unix time when the lease expires, 0 for an infinite lease."
+  print "# TYPE dnsmasq_lease_expiry_timestamp_seconds gauge"
+  for (i = 1; i <= n; i++) print "dnsmasq_lease_expiry_timestamp_seconds{" labels[i] "} " expiry[i]
+}' > "$tmp"
+
+# mktemp creates 0600; Alloy runs as alloy.
+chmod 0644 "$tmp"
+mv "$tmp" "$out"
+trap - EXIT

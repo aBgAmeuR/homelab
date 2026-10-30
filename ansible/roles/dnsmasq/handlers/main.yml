@@ -4,3 +4,9 @@
     name: dnsmasq
     state: restarted
     daemon_reload: true
+
+- name: Restart lease metrics timer
+  ansible.builtin.systemd:
+    name: dnsmasq-leases-metrics.timer
+    state: restarted
+    daemon_reload: true

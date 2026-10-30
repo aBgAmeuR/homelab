@@ -11,3 +11,7 @@ dnsmasq_dhcp_range_end: 192.168.1.100
 dnsmasq_dhcp_lease_time: 12h
 dnsmasq_dhcp_router: 192.168.1.1
 dnsmasq_dhcp_dns_servers: []
+
+dnsmasq_lease_file: /var/lib/misc/dnsmasq.leases
+dnsmasq_metrics_dir: "{{ alloy_textfile_dir | default('/var/lib/prometheus/node-exporter') }}"
+dnsmasq_metrics_interval: 30s

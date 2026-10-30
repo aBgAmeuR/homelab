@@ -18,7 +18,8 @@ Every guest runs Grafana Alloy (role `alloy`, playbook `supervision.yml`), a Deb
 | --- | --- |
 | Host metrics | Built-in node-exporter, `job="node"`. Hardware collectors are off: an LXC has nothing to read there. `diskstats` is off too: inside an LXC it reports the host's block devices. Disk I/O per guest comes from pve-exporter, so the disk panels of **Node Exporter Full** stay empty for the guests |
 | Services | `node_systemd_unit_state` for the units in `alloy_systemd_units`, plus `alloy.service` |
-| Textfile | `*.prom` in `/var/lib/prometheus/node-exporter` (WireGuard peers on CT 118, container state on Docker hosts) |
+| Textfile | `*.prom` in `/var/lib/prometheus/node-exporter`: pending apt upgrades on every guest, DHCP leases on CT 116, WireGuard peers on CT 118, container state on Docker hosts. `node_textfile_mtime_seconds{file=…}` tells when a file was last written |
+| Updates | A timer writes `apt_upgrades_pending{origin,arch}` (security upgrades have `Debian-Security` in `origin`), `apt_autoremove_pending`, `apt_package_cache_timestamp_seconds` and `node_reboot_required` every 15 minutes, from `apt-get --just-print dist-upgrade`. `apt-daily.timer` refreshes the package lists once a day (`/etc/apt/apt.conf.d/10periodic`); it downloads and installs nothing |
 | App metrics | `alloy_scrape_targets`, scraped on loopback: Blocky (`job="blocky"`), Garage admin API with its metrics token (`job="garage"`), cAdvisor on Docker hosts (`job="cadvisor"`) |
 | Journal | Whole journal to Loki, labels `service_name` (the unit without `.service`, or the syslog identifier), `unit` and `level` (journald priority). Fields of JSON units (`alloy_journal_json_units`) become structured metadata |
 | Containers | Docker hosts (`alloy_docker`): stdout and stderr of every container, `service_name` = Compose service, labels `container` and `compose_project`. Harmony is skipped (it sends its logs over OTLP). A timer writes `docker_container_info` and `docker_container_ok` (healthcheck status, exit code) every 30 s |
@@ -39,6 +40,8 @@ Group and host variables set what each guest reports: `alloy_systemd_units`, `al
 | Logs | Alloy on every guest (journal, containers). Harmony and its OTLP logs, see below |
 | Probes | blackbox exporter on CT 111: ping every guest and the Proxmox host, HTTPS on every Caddy site's health path, a DNS query to Blocky |
 | DNS | Blocky metrics and JSON log through Alloy on CT 116 (`service_name="blocky"`) |
+| DHCP | `dnsmasq_leases` and `dnsmasq_lease_expiry_timestamp_seconds{mac,ip,hostname}` from the dnsmasq lease file on CT 116, every 30 s |
+| Pending updates | apt on every guest, through the textfile collector |
 | WireGuard | Peer handshakes and traffic on CT 118, through the textfile collector |
 | Caddy | OTLP metrics and traces, pushed by Caddy to the collector |
 | Stack health | Loki, Tempo, Pyroscope, the collector and blackbox scraped by Prometheus |
@@ -68,6 +71,8 @@ The `compose` role also writes `/opt/monitoring/catalog.json`: the Proxmox node,
 ## Harmony telemetry
 
 Harmony sends traces, logs, and metrics to `http://192.168.1.111:4318` (`service.name=harmony`, `deployment.environment=production`). The collector keeps full traces in Tempo, logs in Loki, and builds request, error, and duration metrics from server spans.
+
+The collector also builds service graph metrics (`traces_service_graph_*`) from every trace it receives, Caddy's included. Grafana's Tempo datasource reads them from Prometheus for the service map. A service only gets an edge when its spans reach the collector, so uninstrumented upstreams (Grafana, Filestash, AFFiNE, TinyAuth) do not appear yet.
 
 The Grafana dashboard **Harmony** reads those metrics and logs. From a trace, Grafana opens the matching Loki lines. From a log line, it opens the Tempo trace.
 

@@ -1,0 +1,10 @@
+[Unit]
+Description=Write pending apt upgrades every {{ alloy_apt_metrics_interval }}
+
+[Timer]
+OnBootSec={{ alloy_apt_metrics_interval }}
+OnUnitActiveSec={{ alloy_apt_metrics_interval }}
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

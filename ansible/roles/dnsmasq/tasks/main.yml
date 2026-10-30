@@ -58,6 +58,41 @@
     enabled: true
     state: started
 
+- name: Create the metrics directory
+  ansible.builtin.file:
+    path: "{{ dnsmasq_metrics_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install the lease metrics script
+  ansible.builtin.copy:
+    src: dnsmasq-leases-metrics
+    dest: /usr/local/bin/dnsmasq-leases-metrics
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install the lease metrics units
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - dnsmasq-leases-metrics.service
+    - dnsmasq-leases-metrics.timer
+  notify: Restart lease metrics timer
+
+- name: Enable and start the lease metrics timer
+  ansible.builtin.systemd:
+    name: dnsmasq-leases-metrics.timer
+    enabled: true
+    state: started
+    daemon_reload: true
+
 - name: Apply pending dnsmasq restarts
   ansible.builtin.meta: flush_handlers
 
