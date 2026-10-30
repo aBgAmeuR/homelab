@@ -1,10 +1,10 @@
 {%- set proxy = groups['reverse_proxies'] | first -%}
 {%- set by_ip = {} -%}
-{%- for host in groups['all'] -%}
+{%- for host in groups['guests'] -%}
 {%- set _ = by_ip.update({hostvars[host].ansible_host: host}) -%}
 {%- endfor -%}
 {%- set guests = [] -%}
-{%- for host in groups['all'] | sort -%}
+{%- for host in groups['guests'] | sort -%}
 {%- set hv = hostvars[host] -%}
 {%- set docker = hv.alloy_docker | default(false) -%}
 {%- set _ = guests.append({

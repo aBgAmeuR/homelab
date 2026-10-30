@@ -1,4 +1,4 @@
-{% for host in groups['all'] | sort %}
+{% for host in groups['guests'] | sort %}
 - targets: ["{{ hostvars[host].ansible_host }}"]
   labels:
     instance: {{ host }}

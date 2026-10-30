@@ -34,7 +34,7 @@ Neither tool touches the other's side, so a drifting guest never causes a contai
 | 116 | 192.168.1.116 | dns | Blocky + dnsmasq |
 | 118 | 192.168.1.118 | vpn | WireGuard |
 
-`192.168.1.110` is the Proxmox host and `192.168.1.117` is remote-dev, so VMID 117 is not used for a guest.
+`192.168.1.110` is the Proxmox host (`pve` in group `pve_nodes` of the inventory; only the supervision playbook runs there) and `192.168.1.117` is remote-dev, so VMID 117 is not used for a guest.
 
 Every guest also runs Alloy, the supervision agent ([Observability](observability.md)). `ansible/inventory/hosts.yml` repeats each guest's `vmid`: it labels the guest's metrics, logs and probes.
 

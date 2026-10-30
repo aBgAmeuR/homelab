@@ -3,7 +3,7 @@
   ansible.builtin.assert:
     that:
       - alloy_instance | length > 0
-      - alloy_vmid | string | length > 0
+      - alloy_node or alloy_vmid | string | length > 0
     fail_msg: Set vmid for this host in inventory/hosts.yml.
 
 - name: Remove the agents Alloy replaces
@@ -122,6 +122,74 @@
     state: started
     daemon_reload: true
   when: alloy_docker
+
+- name: Install the SMART metrics script
+  ansible.builtin.copy:
+    src: smart-metrics
+    dest: /usr/local/bin/smart-metrics
+    owner: root
+    group: root
+    mode: "0755"
+  when: alloy_smart
+
+- name: Install the SMART metrics units
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - smart-metrics.service
+    - smart-metrics.timer
+  when: alloy_smart
+  notify: Restart smart metrics timer
+
+- name: Enable and start the SMART metrics timer
+  ansible.builtin.systemd:
+    name: smart-metrics.timer
+    enabled: true
+    state: started
+    daemon_reload: true
+  when: alloy_smart
+
+- name: Create the Alloy unit override directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/alloy.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: alloy_beyla
+
+- name: Run Alloy as root where Beyla needs eBPF
+  ansible.builtin.template:
+    src: alloy-root.conf.j2
+    dest: /etc/systemd/system/alloy.service.d/root.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when: alloy_beyla
+  notify: Restart alloy
+
+- name: Remove the root override where Beyla is off
+  ansible.builtin.file:
+    path: /etc/systemd/system/alloy.service.d/root.conf
+    state: absent
+  when: not alloy_beyla
+  notify: Restart alloy
+
+- name: Name the guests for Beyla's reverse lookups
+  ansible.builtin.blockinfile:
+    path: /etc/hosts
+    marker: "# {mark} Alloy Beyla peers"
+    insertafter: '^127\.0\.0\.1 '
+    block: |
+      {% for host in alloy_beyla_peers %}
+      {{ hostvars[host].ansible_host }} {{ host }}
+      {% endfor %}
+  when: alloy_beyla
+  notify: Restart alloy
 
 - name: Install the Alloy environment
   ansible.builtin.template:

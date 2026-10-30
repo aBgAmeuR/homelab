@@ -9,22 +9,33 @@ prometheus.remote_write "monitoring" {
   endpoint {
     url = {{ alloy_prometheus_url | to_json }}
   }
+{% if alloy_vmid | string | length > 0 %}
 
   external_labels = {
     vmid = {{ alloy_vmid | string | to_json }},
   }
+{% endif %}
 }
 
+{% if not alloy_node %}
 // Hardware collectors have nothing to read in an LXC.
 // diskstats would report the host's block devices, not the guest's I/O
 // (pve-exporter has that), and logs a udev error at start.
+{% endif %}
 prometheus.exporter.unix "host" {
   enable_collectors  = ["systemd"]
+{% if alloy_node %}
+  disable_collectors = [
+    "arp", "bcache", "bonding", "btrfs", "fibrechannel", "infiniband", "ipvs",
+    "nfs", "nfsd", "tapestats", "xfs",
+  ]
+{% else %}
   disable_collectors = [
     "arp", "bcache", "bonding", "btrfs", "cpufreq", "diskstats", "dmi", "edac",
     "fibrechannel", "hwmon", "infiniband", "ipvs", "mdadm", "nfs", "nfsd", "nvme",
     "powersupplyclass", "rapl", "schedstat", "tapestats", "thermal_zone", "xfs", "zfs",
   ]
+{% endif %}
 
   textfile {
     directory = {{ alloy_textfile_dir | to_json }}
@@ -71,6 +82,59 @@ prometheus.scrape {{ target.job | regex_replace('[^A-Za-z0-9_]', '_') | to_json 
   forward_to      = [prometheus.remote_write.monitoring.receiver]
 }
 {% endfor %}
+{% if alloy_beyla %}
+
+beyla.ebpf "services" {
+  discovery {
+    instrument {
+      open_ports = {{ alloy_beyla_open_ports | to_json }}
+    }
+  }
+
+  metrics {
+    features = {{ alloy_beyla_features | to_json }}
+  }
+
+  name_resolver {
+    sources = ["dns"]
+  }
+}
+
+prometheus.scrape "beyla" {
+  targets         = beyla.ebpf.services.targets
+  honor_labels    = true
+  scrape_interval = {{ alloy_scrape_interval | to_json }}
+  forward_to      = [prometheus.relabel.beyla.receiver]
+}
+
+// Beyla also counts a client call to an instrumented guest as a virtual node
+// named after the guest, and names unresolved callers "incoming". The central
+// collector already reports user -> caddy from Caddy's own spans.
+prometheus.relabel "beyla" {
+{% if alloy_beyla_peers | length > 0 %}
+  rule {
+    source_labels = ["__name__", "connection_type", "server"]
+    regex         = `traces_service_graph_.+;virtual_node;({{ alloy_beyla_peers | map('regex_escape') | join('|') }})`
+    action        = "drop"
+  }
+
+{% endif %}
+  rule {
+    source_labels = ["__name__", "client", "server"]
+    regex         = `traces_service_graph_.+;incoming;caddy`
+    action        = "drop"
+  }
+
+  rule {
+    source_labels = ["client"]
+    regex         = "incoming"
+    target_label  = "client"
+    replacement   = "user"
+  }
+
+  forward_to = [prometheus.remote_write.monitoring.receiver]
+}
+{% endif %}
 
 loki.write "monitoring" {
   endpoint {
@@ -79,7 +143,9 @@ loki.write "monitoring" {
 
   external_labels = {
     instance = {{ alloy_instance | to_json }},
+{% if alloy_vmid | string | length > 0 %}
     vmid     = {{ alloy_vmid | string | to_json }},
+{% endif %}
   }
 }
 

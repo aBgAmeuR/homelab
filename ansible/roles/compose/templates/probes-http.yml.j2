@@ -1,6 +1,6 @@
 {% set proxy = groups['reverse_proxies'] | first %}
 {% set by_ip = {} %}
-{% for host in groups['all'] %}
+{% for host in groups['guests'] %}
 {% set _ = by_ip.update({hostvars[host].ansible_host: host}) %}
 {% endfor %}
 {% for site in hostvars[proxy].caddy_sites %}

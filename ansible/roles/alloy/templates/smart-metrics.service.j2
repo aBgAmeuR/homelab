@@ -1,0 +1,6 @@
+[Unit]
+Description=SMART disk health for the Alloy textfile collector
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/smart-metrics {{ alloy_textfile_dir }}/smart.prom

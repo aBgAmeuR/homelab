@@ -16,10 +16,16 @@ alloy_scrape_interval: 30s
 alloy_journal_max_age: 12h
 
 alloy_instance: "{{ inventory_hostname }}"
-alloy_vmid: "{{ vmid }}"
+alloy_vmid: "{{ vmid | default('') }}"
+
+# true on a Proxmox node: hardware collectors on, no vmid label.
+alloy_node: false
 
 alloy_textfile_dir: /var/lib/prometheus/node-exporter
 alloy_apt_metrics_interval: 15min
+
+alloy_smart: false
+alloy_smart_metrics_interval: 5min
 
 alloy_systemd_units: []
 
@@ -46,3 +52,17 @@ alloy_legacy_paths:
   - /etc/otelcol-contrib
   - /var/lib/otelcol-contrib
   - /var/cache/otelcol
+
+# Beyla needs eBPF capabilities, so Alloy runs as root where it is enabled.
+alloy_beyla: false
+alloy_beyla_open_ports: ""
+# Inventory hosts whose address Beyla names after them (reverse lookup through
+# /etc/hosts), so the service graph shows who calls whom.
+alloy_beyla_peers: "{{ groups['guests'] | default([]) }}"
+# Beyla only emits the service graph when a span metrics feature is on.
+# application_span (traces_spanmetrics_*) avoids the traces_span_metrics_*
+# names the central collector already writes.
+alloy_beyla_features:
+  - application
+  - application_span
+  - application_service_graph

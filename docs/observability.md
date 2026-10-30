@@ -30,12 +30,45 @@ If CT 111 is unreachable, Alloy keeps metrics in its WAL and retries. Prometheus
 
 Group and host variables set what each guest reports: `alloy_systemd_units`, `alloy_scrape_targets`, `alloy_journal_json_units`, `alloy_docker`, `alloy_docker_logs_exclude`.
 
+## Proxmox host
+
+The Proxmox host is in the inventory as `pve` (group `pve_nodes`), apart from the guests (group `guests`). Only `supervision.yml` runs on it. It runs the same Alloy role with `alloy_node: true`:
+
+| What | Detail |
+| --- | --- |
+| Labels | `instance="pve"` and no `vmid`, so it stays out of the guest health rules |
+| Hardware | The hardware collectors are on: `node_hwmon_temp_celsius` (CPU, NVMe, NIC), `diskstats`, `nvme`, and ZFS with `node_zfs_zpool_state{zpool="hdd"}` |
+| SMART | A timer runs `smart-metrics` every 5 minutes. It reads `smartctl --json` for every disk without waking a sleeping one and writes `smart_health_passed`, `smart_temperature_celsius`, `smart_power_on_hours`, the ATA error counters (`smart_ata_*`) and the NVMe wear and spare (`smart_nvme_*`). `smart_device_info` holds model and serial |
+| Services | The PVE units (`pve-cluster`, `pvedaemon`, `pveproxy`, `pvestatd`, `pvescheduler`, `pve-firewall`), `zfs-zed`, `smartmontools`, `chrony` |
+| Updates and journal | Same as the guests |
+
+### Beyla
+
+Alloy on the host also runs Beyla (`beyla.ebpf`, `alloy_beyla: true`). From the host kernel it sees the processes of every CT, so the apps need no instrumentation. eBPF needs privileges: on the host, a systemd drop-in (`alloy.service.d/root.conf`) runs Alloy as root. Guests keep the `alloy` user.
+
+Beyla instruments the processes that listen on `alloy_beyla_open_ports` and pushes, per service (`job` and `service_name` = the executable or its `OTEL_SERVICE_NAME`):
+
+- `http_server_request_duration_seconds` and `http_client_request_duration_seconds`, with route, method and status: request rate, errors and latency for Caddy, Grafana, TinyAuth, Filestash, AFFiNE, Harmony, Garage and Blocky;
+- `db_client_operation_duration_seconds` for AFFiNE and Grafana.
+
+`instance` is `<host>:<pid>`, so a restart starts new series. `pveproxy` (`:8006`) is left out: its workers change PID often. `beyla_instrumentation_errors_total{error_type="symbol_not_found"}` is expected for stripped Go binaries; Beyla falls back to kernel probes.
+
+Beyla also writes the service graph (`traces_service_graph_*`, label `source="beyla"`), so Grafana's service map shows who calls whom: `caddy → grafana`, `caddy → filestash`, `caddy → server` (AFFiNE), `caddy → auth`, `caddy → pve.nas.local`, `monitoring → caddy`, and AFFiNE's database calls. Three settings make it work:
+
+- **A span metrics feature.** Beyla only emits the service graph when a span metrics feature is on. `application_span` is used: its `traces_spanmetrics_*` names do not clash with the `traces_span_metrics_*` the central collector writes for Harmony.
+- **Names for the guests.** Beyla resolves a peer IP with a reverse lookup (`name_resolver { sources = ["dns"] }`). The role writes a managed block at the top of the host's `/etc/hosts` that maps each guest address to its inventory name (`192.168.1.113 caddy`). It sits above the hand-written `192.168.1.113 auth.antoinejosset.fr` line, because a reverse lookup takes the first match. Without it, every peer is `incoming` or `outgoing`.
+- **Relabelling** (`prometheus.relabel "beyla"`). Beyla also counts a client call to an instrumented guest as a virtual node named after the guest (`caddy → docker`). Those duplicates are dropped. `incoming → caddy` is dropped too: the central collector already reports `user → caddy`. Other unresolved callers become `user`.
+
+A server is named after its process (`grafana`, `filestash`, `server` for AFFiNE), except TinyAuth, which Beyla names after its guest (`auth`).
+
 ## Signals
 
 | Signal | Source |
 | --- | --- |
 | Guest resources and uptime | pve-exporter reading the API on 192.168.1.110 (CPU, memory, root disk, network, uptime, start at boot) |
-| Host metrics and services | Alloy on every guest |
+| Host metrics and services | Alloy on every guest and on the Proxmox host |
+| Proxmox host hardware | Temperatures, ZFS and SMART through Alloy on the host |
+| Per-service HTTP and DB metrics | Beyla in Alloy on the Proxmox host |
 | Container metrics | cAdvisor on CT 111 and CT 115, scraped by the local Alloy |
 | Logs | Alloy on every guest (journal, containers). Harmony and its OTLP logs, see below |
 | Probes | blackbox exporter on CT 111: ping every guest and the Proxmox host, HTTPS on every Caddy site's health path, a DNS query to Blocky |
@@ -72,7 +105,7 @@ The `compose` role also writes `/opt/monitoring/catalog.json`: the Proxmox node,
 
 Harmony sends traces, logs, and metrics to `http://192.168.1.111:4318` (`service.name=harmony`, `deployment.environment=production`). The collector keeps full traces in Tempo, logs in Loki, and builds request, error, and duration metrics from server spans.
 
-The collector also builds service graph metrics (`traces_service_graph_*`) from every trace it receives, Caddy's included. Grafana's Tempo datasource reads them from Prometheus for the service map. A service only gets an edge when its spans reach the collector, so uninstrumented upstreams (Grafana, Filestash, AFFiNE, TinyAuth) do not appear yet.
+The collector also builds service graph metrics (`traces_service_graph_*`) from every trace it receives, Caddy's included. Grafana's Tempo datasource reads them from Prometheus for the service map. Edges between the guests come from Beyla (see [Beyla](#beyla)).
 
 The Grafana dashboard **Harmony** reads those metrics and logs. From a trace, Grafana opens the matching Loki lines. From a log line, it opens the Tempo trace.
 

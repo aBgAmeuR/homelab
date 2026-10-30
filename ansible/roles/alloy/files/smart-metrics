@@ -1,0 +1,109 @@
+#!/usr/bin/python3
+import json
+import os
+import subprocess
+import sys
+import tempfile
+
+out = sys.argv[1]
+
+ATA_ATTRIBUTES = {
+    5: "reallocated_sectors",
+    187: "reported_uncorrectable",
+    188: "command_timeout",
+    196: "reallocated_events",
+    197: "pending_sectors",
+    198: "offline_uncorrectable",
+    199: "udma_crc_errors",
+}
+
+lines = []
+seen = set()
+
+
+def esc(value):
+    return str(value).replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ")
+
+
+def metric(name, help_text, labels, value):
+    if name not in seen:
+        seen.add(name)
+        lines.append(f"# HELP {name} {help_text}")
+        lines.append(f"# TYPE {name} gauge")
+    label = ",".join(f'{k}="{esc(v)}"' for k, v in labels.items())
+    lines.append(f"{name}{{{label}}} {value}")
+
+
+def smartctl(*args):
+    result = subprocess.run(
+        ["smartctl", "--json=c", *args], capture_output=True, text=True, check=False
+    )
+    return json.loads(result.stdout or "{}")
+
+
+for entry in smartctl("--scan-open").get("devices", []):
+    device = entry["name"]
+    # -n standby: a sleeping HDD is left asleep and reported as such.
+    data = smartctl("--all", "--nocheck=standby", "--device", entry["type"], device)
+    labels = {"device": device}
+    status = data.get("smartctl", {}).get("exit_status", 1)
+    standby = "smart_status" not in data and bool(status & 2)
+
+    metric("smart_smartctl_exit_status", "smartctl exit status bits.", labels, status)
+    metric("smart_device_standby", "1 if the disk was asleep and not read.", labels, int(bool(standby)))
+    if "smart_status" not in data:
+        continue
+
+    metric(
+        "smart_device_info",
+        "Disk model and serial.",
+        {
+            "device": device,
+            "model": data.get("model_name", ""),
+            "serial": data.get("serial_number", ""),
+            "protocol": data.get("device", {}).get("protocol", ""),
+            "rotational": int(data.get("rotation_rate", 0) not in (0, None)),
+        },
+        1,
+    )
+    metric("smart_health_passed", "1 if the overall SMART self-assessment passed.", labels,
+           int(data["smart_status"].get("passed", False)))
+    if "temperature" in data:
+        metric("smart_temperature_celsius", "Current disk temperature.", labels,
+               data["temperature"].get("current", 0))
+    if "power_on_time" in data:
+        metric("smart_power_on_hours", "Power-on hours.", labels,
+               data["power_on_time"].get("hours", 0))
+
+    for attr in data.get("ata_smart_attributes", {}).get("table", []):
+        name = ATA_ATTRIBUTES.get(attr["id"])
+        if name:
+            metric(f"smart_ata_{name}", f"Raw value of ATA attribute {attr['id']}.", labels,
+                   attr["raw"]["value"])
+
+    nvme = data.get("nvme_smart_health_information_log")
+    if nvme:
+        metric("smart_nvme_percentage_used", "Vendor estimate of NVMe life used, in percent.", labels,
+               nvme.get("percentage_used", 0))
+        metric("smart_nvme_available_spare_percent", "Remaining spare capacity, in percent.", labels,
+               nvme.get("available_spare", 0))
+        metric("smart_nvme_available_spare_threshold_percent", "Spare threshold, in percent.", labels,
+               nvme.get("available_spare_threshold", 0))
+        metric("smart_nvme_critical_warning", "NVMe critical warning bits.", labels,
+               nvme.get("critical_warning", 0))
+        metric("smart_nvme_media_errors", "Unrecovered data integrity errors.", labels,
+               nvme.get("media_errors", 0))
+        metric("smart_nvme_unsafe_shutdowns", "Unsafe shutdowns.", labels,
+               nvme.get("unsafe_shutdowns", 0))
+        metric("smart_nvme_data_units_written", "Data units written (1 unit = 512000 bytes).", labels,
+               nvme.get("data_units_written", 0))
+
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(out), prefix=os.path.basename(out) + ".")
+try:
+    with os.fdopen(fd, "w") as f:
+        f.write("\n".join(lines) + "\n")
+    os.chmod(tmp, 0o644)
+    os.replace(tmp, out)
+except BaseException:
+    os.unlink(tmp)
+    raise

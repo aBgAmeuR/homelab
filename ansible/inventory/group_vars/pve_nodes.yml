@@ -1,0 +1,16 @@
+---
+alloy_node: true
+alloy_memory_limit: 512MiB
+alloy_smart: true
+alloy_systemd_units:
+  - pve-cluster.service
+  - pvedaemon.service
+  - pveproxy.service
+  - pvestatd.service
+  - pvescheduler.service
+  - pve-firewall.service
+  - zfs-zed.service
+  - smartmontools.service
+  - chrony.service
+alloy_beyla: true
+alloy_beyla_open_ports: "80,443,3000,3010,3900,4000,8334,17170"
