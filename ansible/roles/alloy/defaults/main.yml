@@ -27,6 +27,9 @@ alloy_apt_metrics_interval: 15min
 alloy_smart: false
 alloy_smart_metrics_interval: 5min
 
+alloy_zfs_snapshots: false
+alloy_zfs_snapshot_metrics_interval: 5min
+
 alloy_systemd_units: []
 
 # Local metric endpoints, pushed with job=<job>, instance=<alloy_instance>.

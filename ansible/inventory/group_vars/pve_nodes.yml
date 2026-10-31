@@ -2,6 +2,7 @@
 alloy_node: true
 alloy_memory_limit: 512MiB
 alloy_smart: true
+alloy_zfs_snapshots: true
 alloy_systemd_units:
   - pve-cluster.service
   - pvedaemon.service

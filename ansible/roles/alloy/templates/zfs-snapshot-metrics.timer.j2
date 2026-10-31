@@ -1,0 +1,10 @@
+[Unit]
+Description=Write ZFS snapshot ages every {{ alloy_zfs_snapshot_metrics_interval }}
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec={{ alloy_zfs_snapshot_metrics_interval }}
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

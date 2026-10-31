@@ -198,6 +198,15 @@ groups:
           summary: "ZFS pool {{ $labels.zpool }} is {{ $labels.state }}"
           description: "Run zpool status {{ $labels.zpool }} on {{ $labels.instance }}."
 
+      - alert: ZfsSnapshotStale
+        expr: time() - zfs_snapshot_latest_timestamp_seconds > 8 * 86400
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Newest snapshot of {{ $labels.dataset }} is over 8 days old"
+          description: "No snapshot of {{ $labels.dataset }} for over 8 days on {{ $labels.instance }}. Check the snapshot job."
+
       - alert: DiskFailing
         expr: |
           (smart_health_passed == 0)

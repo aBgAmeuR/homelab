@@ -284,6 +284,28 @@ tests:
               summary: "Guest 116 (dns) has no backup job"
               description: "No Proxmox backup job covers guest 116."
 
+  - name: a dataset whose newest snapshot is older than 8 days is reported
+    interval: 1h
+    input_series:
+      - series: 'zfs_snapshot_latest_timestamp_seconds{instance="pve", dataset="hdd/subvol-116-disk-0"}'
+        values: "0x400"
+      - series: 'zfs_snapshot_latest_timestamp_seconds{instance="pve", dataset="hdd/subvol-118-disk-0"}'
+        values: "0+3600x400"
+    alert_rule_test:
+      - eval_time: 190h
+        alertname: ZfsSnapshotStale
+        exp_alerts: []
+      - eval_time: 200h
+        alertname: ZfsSnapshotStale
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              instance: pve
+              dataset: hdd/subvol-116-disk-0
+            exp_annotations:
+              summary: "Newest snapshot of hdd/subvol-116-disk-0 is over 8 days old"
+              description: "No snapshot of hdd/subvol-116-disk-0 for over 8 days on pve. Check the snapshot job."
+
   - name: the watchdog always fires
     interval: 1m
     alert_rule_test:

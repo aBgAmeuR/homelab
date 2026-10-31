@@ -1,0 +1,6 @@
+[Unit]
+Description=ZFS snapshot ages for the Alloy textfile collector
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/zfs-snapshot-metrics {{ alloy_textfile_dir }}/zfs-snapshot.prom

@@ -153,6 +153,36 @@
     daemon_reload: true
   when: alloy_smart
 
+- name: Install the ZFS snapshot metrics script
+  ansible.builtin.copy:
+    src: zfs-snapshot-metrics
+    dest: /usr/local/bin/zfs-snapshot-metrics
+    owner: root
+    group: root
+    mode: "0755"
+  when: alloy_zfs_snapshots
+
+- name: Install the ZFS snapshot metrics units
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - zfs-snapshot-metrics.service
+    - zfs-snapshot-metrics.timer
+  when: alloy_zfs_snapshots
+  notify: Restart zfs snapshot metrics timer
+
+- name: Enable and start the ZFS snapshot metrics timer
+  ansible.builtin.systemd:
+    name: zfs-snapshot-metrics.timer
+    enabled: true
+    state: started
+    daemon_reload: true
+  when: alloy_zfs_snapshots
+
 - name: Create the Alloy unit override directory
   ansible.builtin.file:
     path: /etc/systemd/system/alloy.service.d

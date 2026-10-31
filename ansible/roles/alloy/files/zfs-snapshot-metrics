@@ -1,0 +1,49 @@
+#!/usr/bin/python3
+import os
+import subprocess
+import sys
+import tempfile
+
+out = sys.argv[1]
+
+
+def zfs(*args):
+    result = subprocess.run(["zfs", *args], capture_output=True, text=True, check=True)
+    return result.stdout.splitlines()
+
+
+def esc(value):
+    return str(value).replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ")
+
+
+count = {name: 0 for name in zfs("list", "-H", "-o", "name", "-t", "filesystem,volume")}
+latest = {}
+
+for line in zfs("get", "-H", "-p", "-t", "snapshot", "-o", "name,value", "creation"):
+    name, value = line.split("\t")
+    dataset = name.split("@", 1)[0]
+    count[dataset] = count.get(dataset, 0) + 1
+    latest[dataset] = max(latest.get(dataset, 0), int(value))
+
+lines = [
+    "# HELP zfs_snapshot_latest_timestamp_seconds Creation time of the newest snapshot of the dataset.",
+    "# TYPE zfs_snapshot_latest_timestamp_seconds gauge",
+]
+for dataset, stamp in sorted(latest.items()):
+    lines.append(f'zfs_snapshot_latest_timestamp_seconds{{dataset="{esc(dataset)}"}} {stamp}')
+lines += [
+    "# HELP zfs_snapshot_count Snapshots of the dataset.",
+    "# TYPE zfs_snapshot_count gauge",
+]
+for dataset, total in sorted(count.items()):
+    lines.append(f'zfs_snapshot_count{{dataset="{esc(dataset)}"}} {total}')
+
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(out), prefix=os.path.basename(out) + ".")
+try:
+    with os.fdopen(fd, "w") as f:
+        f.write("\n".join(lines) + "\n")
+    os.chmod(tmp, 0o644)
+    os.replace(tmp, out)
+except BaseException:
+    os.unlink(tmp)
+    raise

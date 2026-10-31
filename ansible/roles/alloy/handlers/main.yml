@@ -22,6 +22,12 @@
     state: restarted
     daemon_reload: true
 
+- name: Restart zfs snapshot metrics timer
+  ansible.builtin.systemd:
+    name: zfs-snapshot-metrics.timer
+    state: restarted
+    daemon_reload: true
+
 - name: Restart smart metrics timer
   ansible.builtin.systemd:
     name: smart-metrics.timer

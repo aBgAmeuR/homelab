@@ -39,6 +39,7 @@ The Proxmox host is in the inventory as `pve` (group `pve_nodes`), apart from th
 | Labels | `instance="pve"` and no `vmid`, so it stays out of the guest health rules |
 | Hardware | The hardware collectors are on: `node_hwmon_temp_celsius` (CPU, NVMe, NIC), `diskstats`, `nvme`, and ZFS with `node_zfs_zpool_state{zpool="hdd"}` |
 | SMART | A timer runs `smart-metrics` every 5 minutes. It reads `smartctl --json` for every disk without waking a sleeping one and writes `smart_health_passed`, `smart_temperature_celsius`, `smart_power_on_hours`, the ATA error counters (`smart_ata_*`) and the NVMe wear and spare (`smart_nvme_*`). `smart_device_info` holds model and serial |
+| ZFS snapshots | A timer runs `zfs-snapshot-metrics` every 5 minutes and writes `zfs_snapshot_latest_timestamp_seconds{dataset}` (creation time of the newest snapshot, absent for a dataset without any) and `zfs_snapshot_count{dataset}` (0 included). A guest's disks are the datasets named `*-<vmid>-disk-*` |
 | Services | The PVE units (`pve-cluster`, `pvedaemon`, `pveproxy`, `pvestatd`, `pvescheduler`, `pve-firewall`), `zfs-zed`, `smartmontools`, `chrony` |
 | Updates and journal | Same as the guests |
 
@@ -112,7 +113,7 @@ Prometheus evaluates the rules in `docker/monitoring/rules/alerts.yml` and sends
 | `guests` | `GuestDown`, `AgentSilent`, `ServiceDown`, `ContainerUnhealthy`, `EndpointDown` (critical for pve-exporter, which `GuestDown` depends on), `GuestMemoryHigh`, `OomKill` |
 | `availability` | `ProbeFailed`, `CertificateExpiring` (warning under 14 days, critical under 7) |
 | `storage` | `FilesystemAlmostFull` (20% and 10% free), `FilesystemFillingUp` (full within 24 hours), `ProxmoxStorageAlmostFull` (80% and 90%), `GuestNotBackedUp` (guests that start at boot) |
-| `host` | `ZpoolUnhealthy`, `DiskFailing`, `DiskDegrading` (one alert per SMART `attribute`), `HardwareTemperatureHigh` (sensor max and crit; maxima above 150 °C are ignored as bogus), `DiskTemperatureHigh` (50 °C for a hard disk, 70 °C for an SSD) |
+| `host` | `ZpoolUnhealthy`, `ZfsSnapshotStale` (newest snapshot of a dataset older than 8 days), `DiskFailing`, `DiskDegrading` (one alert per SMART `attribute`), `HardwareTemperatureHigh` (sensor max and crit; maxima above 150 °C are ignored as bogus), `DiskTemperatureHigh` (50 °C for a hard disk, 70 °C for an SSD) |
 | `apps` | `BlockyBlockingDisabled`, `BlockyListsStale` |
 | `meta` | `Watchdog`, `RuleEvaluationFailures` |
 
