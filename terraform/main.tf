@@ -24,3 +24,18 @@ module "firewall" {
   probe_source  = "192.168.1.111"
   extra_rules   = var.firewall_extra_rules
 }
+
+resource "local_file" "guest_resources" {
+  filename        = "${path.root}/../ansible/inventory/group_vars/guests.yml"
+  file_permission = "0644"
+  content = yamlencode({
+    guest_resources = {
+      for k, ct in var.containers : k => {
+        cores     = ct.cores
+        memory_mb = ct.memory
+        swap_mb   = coalesce(ct.swap, max(128, ct.memory / 2))
+        disk_gb   = ct.disk_size
+      }
+    }
+  })
+}

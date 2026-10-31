@@ -1,0 +1,36 @@
+"guest_resources":
+  "auth":
+    "cores": 1
+    "disk_gb": 8
+    "memory_mb": 512
+    "swap_mb": 256
+  "caddy":
+    "cores": 1
+    "disk_gb": 8
+    "memory_mb": 512
+    "swap_mb": 256
+  "dns":
+    "cores": 1
+    "disk_gb": 8
+    "memory_mb": 512
+    "swap_mb": 256
+  "docker":
+    "cores": 2
+    "disk_gb": 32
+    "memory_mb": 4096
+    "swap_mb": 1024
+  "garage":
+    "cores": 1
+    "disk_gb": 32
+    "memory_mb": 512
+    "swap_mb": 256
+  "monitoring":
+    "cores": 2
+    "disk_gb": 64
+    "memory_mb": 4096
+    "swap_mb": 1024
+  "vpn":
+    "cores": 1
+    "disk_gb": 8
+    "memory_mb": 512
+    "swap_mb": 256

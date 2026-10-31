@@ -15,6 +15,7 @@
       'groups': hv.group_names | sort,
       'units': ((hv.alloy_systemd_units | default([])) + ['alloy.service']) | unique,
       'docker': docker,
+      'resources': hv.guest_resources[host],
       'metric_jobs': ['node']
         + (hv.alloy_scrape_targets | default([]) | map(attribute='job') | list)
         + (['cadvisor'] if docker else []),

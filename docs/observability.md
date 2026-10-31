@@ -134,7 +134,7 @@ Deploy: `task ansible -- playbooks/observability.yml`.
 
 ## Catalog
 
-The `compose` role also writes `/opt/monitoring/catalog.json`: the Proxmox node, every guest (vmid, address, description, groups, units, metric jobs, Docker or not) and every Caddy site with the guest behind it. It is generated from the inventory and holds no secret. Nothing mounts it yet; it is meant for Jarvis.
+The `compose` role also writes `/opt/monitoring/catalog.json`: the Proxmox node, every guest (vmid, address, description, groups, units, metric jobs, Docker or not, declared resources) and every Caddy site with the guest behind it. It is generated from the inventory and holds no secret. The `resources` of each guest (`cores`, `memory_mb`, `swap_mb`, `disk_gb`) come from `terraform/terraform.tfvars`: `terraform apply` writes them to `ansible/inventory/group_vars/guests.yml`, which is committed. Nothing mounts it yet; it is meant for Jarvis.
 
 ## Harmony telemetry
 
