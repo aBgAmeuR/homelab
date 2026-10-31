@@ -114,10 +114,9 @@ Prometheus evaluates the rules in `docker/monitoring/rules/alerts.yml` and sends
 | `availability` | `ProbeFailed`, `CertificateExpiring` (warning under 14 days, critical under 7) |
 | `storage` | `FilesystemAlmostFull` (20% and 10% free), `FilesystemFillingUp` (full within 24 hours), `ProxmoxStorageAlmostFull` (80% and 90%), `GuestNotBackedUp` (guests that start at boot) |
 | `host` | `ZpoolUnhealthy`, `ZfsSnapshotStale` (newest snapshot of a dataset older than 8 days), `DiskFailing`, `DiskDegrading` (one alert per SMART `attribute`), `HardwareTemperatureHigh` (sensor max and crit; maxima above 150 °C are ignored as bogus), `DiskTemperatureHigh` (50 °C for a hard disk, 70 °C for an SSD) |
+| `updates` | `SecurityUpgradesPending` (any `Debian-Security` upgrade for 3 days), `UpgradesPending` (over 25 for 7 days), `RebootRequired` (3 days) |
 | `apps` | `BlockyBlockingDisabled`, `BlockyListsStale` |
 | `meta` | `Watchdog`, `RuleEvaluationFailures` |
-
-Updates and pending reboots raise no alert: they belong to the Maintenance view.
 
 Fewer alerts for one cause:
 

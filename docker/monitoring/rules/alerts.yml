@@ -330,6 +330,35 @@ groups:
           summary: "{{ $labels.device }} is at {{ $value }} °C"
           description: "Above 50 °C for a hard disk or 70 °C for an SSD, for 15 minutes."
 
+  - name: updates
+    rules:
+      - alert: SecurityUpgradesPending
+        expr: sum by (instance) (apt_upgrades_pending{origin=~".*Debian-Security.*"}) > 0
+        for: 3d
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} has {{ $value }} security upgrades pending"
+          description: "Security upgrades have waited on {{ $labels.instance }} for 3 days."
+
+      - alert: UpgradesPending
+        expr: sum by (instance) (apt_upgrades_pending) > 25
+        for: 7d
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} has {{ $value }} upgrades pending"
+          description: "More than 25 upgrades have waited on {{ $labels.instance }} for 7 days."
+
+      - alert: RebootRequired
+        expr: node_reboot_required == 1
+        for: 3d
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} needs a reboot"
+          description: "An installed package asked for a reboot on {{ $labels.instance }} 3 days ago."
+
   - name: apps
     rules:
       - alert: BlockyBlockingDisabled

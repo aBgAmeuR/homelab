@@ -306,6 +306,57 @@ tests:
               summary: "Newest snapshot of hdd/subvol-116-disk-0 is over 8 days old"
               description: "No snapshot of hdd/subvol-116-disk-0 for over 8 days on pve. Check the snapshot job."
 
+  - name: pending upgrades and reboots alert after days
+    interval: 4m
+    input_series:
+      - series: 'apt_upgrades_pending{instance="garage", origin="Debian-Security:12", arch="amd64"}'
+        values: "2x2800"
+      - series: 'apt_upgrades_pending{instance="garage", origin="Debian:12", arch="amd64"}'
+        values: "30x2800"
+      - series: 'apt_upgrades_pending{instance="dns", origin="Debian:12", arch="amd64"}'
+        values: "10x2800"
+      - series: 'node_reboot_required{instance="garage"}'
+        values: "1x2800"
+      - series: 'node_reboot_required{instance="dns"}'
+        values: "0x2800"
+    alert_rule_test:
+      - eval_time: 60h
+        alertname: SecurityUpgradesPending
+        exp_alerts: []
+      - eval_time: 80h
+        alertname: SecurityUpgradesPending
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              instance: garage
+            exp_annotations:
+              summary: "garage has 2 security upgrades pending"
+              description: "Security upgrades have waited on garage for 3 days."
+      - eval_time: 160h
+        alertname: UpgradesPending
+        exp_alerts: []
+      - eval_time: 180h
+        alertname: UpgradesPending
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              instance: garage
+            exp_annotations:
+              summary: "garage has 32 upgrades pending"
+              description: "More than 25 upgrades have waited on garage for 7 days."
+      - eval_time: 60h
+        alertname: RebootRequired
+        exp_alerts: []
+      - eval_time: 80h
+        alertname: RebootRequired
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              instance: garage
+            exp_annotations:
+              summary: "garage needs a reboot"
+              description: "An installed package asked for a reboot on garage 3 days ago."
+
   - name: the watchdog always fires
     interval: 1m
     alert_rule_test:
