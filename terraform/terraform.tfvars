@@ -66,6 +66,13 @@ firewall_extra_rules = {
     {
       type    = "in"
       action  = "ACCEPT"
+      dport   = "8090"
+      source  = "192.168.1.113"
+      comment = "Jarvis from Caddy"
+    },
+    {
+      type    = "in"
+      action  = "ACCEPT"
       dport   = "4317"
       source  = "192.168.1.0/24"
       comment = "OTLP gRPC from the LAN"

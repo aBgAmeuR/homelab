@@ -13,6 +13,7 @@ blocky_custom_dns:
   - { name: "caddy.{{ lab_domain }}", ip: 192.168.1.113 }
   - { name: "docs.{{ lab_domain }}", ip: 192.168.1.113 }
   - { name: "files.{{ lab_domain }}", ip: 192.168.1.113 }
+  - { name: "jarvis.{{ lab_domain }}", ip: 192.168.1.113 }
   - { name: "monitoring.{{ lab_domain }}", ip: 192.168.1.113 }
   - { name: "proxmox.{{ lab_domain }}", ip: 192.168.1.113 }
   - { name: "garage.{{ lab_domain }}", ip: 192.168.1.112 }

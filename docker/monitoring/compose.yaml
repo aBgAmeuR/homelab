@@ -132,3 +132,37 @@ services:
       - --config.file=/etc/blackbox/blackbox.yml
     volumes:
       - ./blackbox.yml:/etc/blackbox/blackbox.yml:ro
+
+  jarvis:
+    restart: unless-stopped
+    image: ghcr.io/abgameur/jarvis:1.4.0
+    environment:
+      JARVIS_PROXMOX_URL: https://proxmox.antoinejosset.fr
+      JARVIS_PROXMOX_TOKEN_FILE: /run/secrets/proxmox_token
+      JARVIS_TRUSTED_PROXY: 192.168.1.113
+      JARVIS_OTLP_ENDPOINT: http://otel-collector:4318
+    volumes:
+      - ./catalog.json:/etc/jarvis/catalog.json:ro
+    secrets:
+      - proxmox_token
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 256m
+    ports:
+      - "192.168.1.111:8090:8080"
+    healthcheck:
+      test: ["CMD", "jarvis", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+      - alertmanager
+
+secrets:
+  proxmox_token:
+    file: ./proxmox_token

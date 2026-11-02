@@ -8,6 +8,11 @@ caddy_sites:
   - host: "monitoring.{{ lab_domain }}"
     upstream: "192.168.1.111:3000"
     health_path: /api/health
+  - host: "jarvis.{{ lab_domain }}"
+    upstream: "192.168.1.111:8090"
+    health_path: /healthz
+    forward_auth: true
+    forward_auth_copy_headers: [Remote-User, Remote-Groups]
   - host: "auth.{{ lab_domain }}"
     upstream: "192.168.1.114:3000"
     health_path: /api/healthz

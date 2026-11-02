@@ -18,6 +18,9 @@
 	@protected not path {{ site.health_path }}
 	forward_auth @protected {{ caddy_forward_auth_upstream }} {
 		uri /api/auth/caddy
+{% if site.forward_auth_copy_headers | default([]) %}
+		copy_headers {{ site.forward_auth_copy_headers | join(' ') }}
+{% endif %}
 	}
 {% endif %}
 {% if site.upstream_tls_insecure | default(false) %}

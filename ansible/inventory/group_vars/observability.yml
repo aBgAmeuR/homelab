@@ -34,6 +34,9 @@ compose_templates:
   - src: catalog.json.j2
     dest: catalog.json
     mode: "0644"
+  - src: jarvis-proxmox-token.j2
+    dest: proxmox_token
+    mode: "0644"
 compose_health_url: http://127.0.0.1:3000/api/health
 
 monitoring_grafana_admin_user: admin
