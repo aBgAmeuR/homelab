@@ -3,7 +3,7 @@ name: filestash
 services:
   filestash:
     restart: unless-stopped
-    image: machines/filestash:latest@sha256:e35e58f108d243bd71df44fe10ab0e0a40f61c50e149b6bf3dccfc3e409c3401
+    image: machines/filestash:latest@sha256:935cc2faa3498ac0137a0c3374685be26b9657eb6faccdcd68f665bdbf4ff066
     user: "1000:1000"
     env_file:
       - filestash.env
