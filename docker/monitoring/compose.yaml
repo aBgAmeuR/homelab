@@ -135,7 +135,7 @@ services:
 
   jarvis:
     restart: unless-stopped
-    image: ghcr.io/abgameur/jarvis:1.10.0
+    image: ghcr.io/abgameur/jarvis:1.11.0
     environment:
       JARVIS_PROXMOX_URL: https://proxmox.antoinejosset.fr
       JARVIS_PROXMOX_TOKEN_FILE: /run/secrets/proxmox_token
