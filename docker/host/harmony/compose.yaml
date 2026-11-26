@@ -15,6 +15,7 @@ services:
       OTEL_METRIC_EXPORT_INTERVAL: "30000"
       OTEL_SDK_DISABLED: "false"
       LOG_FORMAT: json
+      DISABLE_UPLOAD: "true"
     ports:
       - "127.0.0.1:3000:3000"
     healthcheck:
